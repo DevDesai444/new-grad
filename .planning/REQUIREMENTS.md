@@ -152,13 +152,84 @@ Which phases cover which requirements. Filled in by the roadmapper.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmapper) | | |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Pending |
+| INFRA-07 | Phase 1 | Pending |
+| INFRA-08 | Phase 1 | Pending |
+| INFRA-09 | Phase 1 | Pending |
+| INFRA-10 | Phase 1 | Pending |
+| CFG-01 | Phase 1 | Pending |
+| CFG-02 | Phase 1 | Pending |
+| CFG-03 | Phase 1 | Pending |
+| CFG-04 | Phase 1 | Pending |
+| CFG-05 | Phase 1 | Pending |
+| CFG-06 | Phase 1 | Pending |
+| ADP-01 | Phase 1 | Pending |
+| ADP-02 | Phase 1 | Pending |
+| ADP-03 | Phase 1 | Pending |
+| ADP-04 | Phase 2 | Pending |
+| ADP-05 | Phase 2 | Pending |
+| ADP-06 | Phase 2 | Pending |
+| ADP-07 | Phase 2 | Pending |
+| ADP-08 | Phase 2 | Pending |
+| ADP-09 | Phase 3 | Pending |
+| ADP-10 | Phase 3 | Pending |
+| ADP-11 | Phase 1 | Pending |
+| ADP-12 | Phase 1 | Pending |
+| ADP-13 | Phase 1 | Pending |
+| ADP-14 | Phase 1 | Pending |
+| ADP-15 | Phase 1 | Pending |
+| FILT-01 | Phase 1 | Pending |
+| FILT-02 | Phase 1 | Pending |
+| FILT-03 | Phase 2 | Pending |
+| FILT-04 | Phase 1 | Pending |
+| FILT-05 | Phase 1 | Pending |
+| FILT-06 | Phase 1 | Pending |
+| NORM-01 | Phase 1 | Pending |
+| NORM-02 | Phase 4 | Pending |
+| NORM-03 | Phase 4 | Pending |
+| NORM-04 | Phase 1 | Pending |
+| NORM-05 | Phase 1 | Pending |
+| NORM-06 | Phase 1 | Pending |
+| NORM-07 | Phase 1 | Pending |
+| STATE-01 | Phase 1 | Pending |
+| STATE-02 | Phase 1 | Pending |
+| STATE-03 | Phase 1 | Pending |
+| STATE-04 | Phase 1 | Pending |
+| STATE-05 | Phase 1 | Pending |
+| STATE-06 | Phase 1 | Pending |
+| STATE-07 | Phase 1 | Pending |
+| STATE-08 | Phase 1 | Pending |
+| OUT-01 | Phase 1 | Pending |
+| OUT-02 | Phase 1 | Pending |
+| OUT-03 | Phase 1 | Pending |
+| OUT-04 | Phase 1 | Pending |
+| OUT-05 | Phase 1 | Pending |
+| OUT-06 | Phase 1 | Pending |
+| OUT-07 | Phase 1 | Pending |
+| OUT-08 | Phase 1 | Pending |
+| OUT-09 | Phase 4 | Pending |
+| SEC-01 | Phase 3 | Pending |
+| SEC-02 | Phase 3 | Pending |
+| SEC-03 | Phase 1 | Pending |
+| SEC-04 | Phase 3 | Pending |
+| SEC-05 | Phase 1 | Pending |
+| SEC-06 | Phase 3 | Pending |
+| RUN-01 | Phase 1 | Pending |
+| RUN-02 | Phase 1 | Pending |
+| RUN-03 | Phase 1 | Pending |
+| RUN-04 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 63 total (10 INFRA + 6 CFG + 15 ADP + 6 FILT + 7 NORM + 8 STATE + 9 OUT + 6 SEC + 4 RUN)
-- Mapped to phases: (filled by roadmapper)
-- Unmapped: 0 ⚠️
+- v1 requirements: 71 total (10 INFRA + 6 CFG + 15 ADP + 6 FILT + 7 NORM + 8 STATE + 9 OUT + 6 SEC + 4 RUN)
+- Mapped to phases: 71/71 ✓ (no orphans, no double-maps)
+- Per-phase distribution: Phase 1 = 58, Phase 2 = 6, Phase 3 = 6, Phase 4 = 3 (note: Phase 1 is foundation-heavy by design — all infra, state, basic adapter contract, basic filter, basic render, and run lifecycle land here so the walking skeleton is end-to-end on day one; subsequent phases add ATS breadth, JS fallback + credentials, and extraction polish)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-07*
-*Last updated: 2026-06-07 after initialization*
+*Last updated: 2026-06-07 — Traceability table populated by roadmapper (4-phase MVP-mode roadmap)*
