@@ -14,6 +14,7 @@ from src.adapters.ashby import AshbyAdapter
 from src.adapters.base import Adapter
 from src.adapters.greenhouse import GreenhouseAdapter
 from src.adapters.lever import LeverAdapter
+from src.adapters.playwright_fallback import PlaywrightAdapter
 from src.adapters.smartrecruiters import SmartRecruitersAdapter
 from src.adapters.workday import WorkdayAdapter
 from src.models import CompanyConfig
@@ -23,8 +24,10 @@ class NoAdapterFound(Exception):
     """Raised by get_adapter when no adapter matches and no fallback exists.
 
     Phase 1's orchestrator (Plan 03) catches this per-company and logs+skips
-    (CFG-05). The run continues for other companies. Phase 3 will add a
-    Playwright catch-all that takes precedence over this error path.
+    (CFG-05). The run continues for other companies. As of Phase 3 Plan 03-02
+    the PlaywrightAdapter catch-all matches any http(s) URL, so this exception
+    only fires for malformed configs (e.g., non-http schemes that slip past
+    CompanyConfig's url validator — defensive).
     """
 
 
@@ -32,7 +35,7 @@ class NoAdapterFound(Exception):
 # Phase 2 Plan 02-01: LeverAdapter, AshbyAdapter, SmartRecruitersAdapter
 # Phase 2 Plan 02-02: WorkdayAdapter
 # Phase 2 Plan 02-03: AppleAdapter
-# Phase 3 will append: PlaywrightAdapter (always last — catch-all)
+# Phase 3 Plan 03-02: PlaywrightAdapter (catch-all — MUST be last per D-01c)
 ADAPTERS: list[type[Adapter]] = [
     GreenhouseAdapter,
     LeverAdapter,
@@ -40,6 +43,7 @@ ADAPTERS: list[type[Adapter]] = [
     SmartRecruitersAdapter,
     WorkdayAdapter,
     AppleAdapter,
+    PlaywrightAdapter,  # CATCH-ALL — must stay last per CONTEXT.md D-01c
 ]
 
 

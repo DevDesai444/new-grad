@@ -72,9 +72,15 @@ def test_adapters_list_is_concrete_classes_not_instances():
 
 
 def test_new_adapter_can_be_added_without_touching_existing_files(tmp_path):
-    """ADP-14 — proof by construction: a synthetic adapter can be appended to
+    """ADP-14 — proof by construction: a synthetic adapter can be added to
     ADAPTERS at runtime, and the registry dispatches to it without any edits
     to existing adapter files.
+
+    Phase 3 Plan 03-02 update: PlaywrightAdapter is now the http(s) catch-all
+    (always the LAST entry per D-01c). New adapters MUST be inserted BEFORE
+    the catch-all so their specific matches() get first crack. We insert at
+    `len(ADAPTERS) - 1` (just before the last entry) to preserve the catch-all
+    invariant.
     """
     from src import registry as reg
     from src.models import CompanyConfig
@@ -91,7 +97,10 @@ def test_new_adapter_can_be_added_without_touching_existing_files(tmp_path):
 
     original = list(reg.ADAPTERS)
     try:
-        reg.ADAPTERS.append(_SyntheticAdapter)
+        # Insert BEFORE the Playwright catch-all so this specific adapter
+        # wins on https://synthetic.example/... (Playwright matches any
+        # http(s) URL, so order matters per D-01c).
+        reg.ADAPTERS.insert(len(reg.ADAPTERS) - 1, _SyntheticAdapter)
         company = CompanyConfig(
             name="synthetic",
             url="https://synthetic.example/jobs",

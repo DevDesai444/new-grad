@@ -124,6 +124,15 @@ def _read_apple_description(raw: dict) -> str:
     return raw.get("jobSummary") or raw.get("postingDescription") or ""
 
 
+def _read_playwright_description(raw: dict) -> str:
+    """Playwright extracts description text when the XHR or DOM exposes it.
+
+    The adapter stashes `description` (XHR-path) or leaves "" (DOM-path
+    when no description selector matched). JD-scan handles "" → (None, None).
+    """
+    return raw.get("description") or ""
+
+
 def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
     """Lever-specific normalization (ADP-04).
 
@@ -469,6 +478,61 @@ def _normalize_apple(rp: RawPosting, run_started_at: datetime) -> Posting:
     )
 
 
+def _normalize_playwright(rp: RawPosting, run_started_at: datetime) -> Posting:
+    """Playwright generic normalization (ADP-09 — Phase 3 Plan 03-02).
+
+    The Playwright adapter emits a tolerant raw shape (XHR or DOM origin):
+      title:        raw["title"]
+      location:     raw["location"] (may be empty)
+      posting_url:  canonicalize_url(raw["posting_url"])
+      posted_date:  coalesce raw["postingDate"], raw["postedAt"],
+                    raw["created_at"], raw["publishedAt"] (any ISO-8601 form)
+      description:  raw["description"] → JD-scan via _read_playwright_description
+
+    Per CONTEXT.md D-01c (catch-all): the raw shape is intentionally
+    generic — sites that prove worth their own adapter (per ADP-14) move
+    out of Playwright and into a dedicated module.
+    """
+    raw = rp.raw
+    dedup_key = raw["__dedup_key"]
+    title = (raw.get("title") or "").strip()
+    location = (raw.get("location") or "").strip()
+    posting_url = canonicalize_url(raw.get("posting_url") or "")
+    # Coalesce common date field names across SPA sites.
+    posted_raw = (
+        raw.get("postingDate")
+        or raw.get("postedAt")
+        or raw.get("created_at")
+        or raw.get("publishedAt")
+    )
+    posted_date = _parse_iso_to_utc(posted_raw)
+
+    # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
+    exp_min, exp_max = extract_experience_range(
+        _read_playwright_description(raw),
+    )
+
+    company = rp.source_company
+    if company.islower():
+        company = company.capitalize()
+
+    return Posting(
+        dedup_key=dedup_key,
+        company=company,
+        title=title,
+        location=location,
+        salary=None,
+        experience_min=exp_min,
+        experience_max=exp_max,
+        posting_url=posting_url,
+        posted_date=posted_date,
+        first_seen=run_started_at,
+        last_seen=run_started_at,
+        still_listed=True,
+        source_adapter=rp.source_adapter,
+    )
+
+
 _DISPATCH = {
     "greenhouse": _normalize_greenhouse,
     "lever": _normalize_lever,
@@ -476,6 +540,7 @@ _DISPATCH = {
     "smartrecruiters": _normalize_smartrecruiters,
     "workday": _normalize_workday,
     "apple": _normalize_apple,
+    "playwright": _normalize_playwright,  # Phase 3 Plan 03-02 — catch-all SPA
 }
 
 

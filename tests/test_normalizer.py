@@ -409,3 +409,126 @@ def test_normalize_apple_populates_experience_from_entry_signal():
     p = normalize(rp, _RUN_STARTED_AT)
     assert p.experience_min == 0
     assert p.experience_max is None
+
+
+# --- Phase 3 Plan 03-02 — PlaywrightAdapter normalizer (ADP-09) --------------
+
+
+def test_normalize_playwright_xhr_path_with_id():
+    """XHR-path raw blob (id, title, location, postingUrl, postingDate, description).
+
+    Description has "0-3 years" → experience_min=0, experience_max=3 via
+    extract_experience_range (FILT-03 / CONTEXT.md D-02 display-only).
+    """
+    rp = RawPosting(
+        source_company="anthropic",
+        source_adapter="playwright",
+        raw={
+            "id": "j-100",
+            "title": "Software Engineer, New Grad",
+            "location": "San Francisco, CA",
+            "posting_url": "https://www.anthropic.com/careers/j-100",
+            "postingDate": "2026-06-01T12:00:00Z",
+            "description": "0-3 years of experience required.",
+            "__dedup_key": "pw:anthropic.com:j-100",
+            "__host": "anthropic.com",
+            "__extraction_path": "xhr",
+        },
+    )
+    p = normalize(rp, _RUN_STARTED_AT)
+    assert p.dedup_key == "pw:anthropic.com:j-100"
+    assert p.source_adapter == "playwright"
+    assert p.title == "Software Engineer, New Grad"
+    assert p.location == "San Francisco, CA"
+    assert p.posting_url == "https://www.anthropic.com/careers/j-100"
+    assert p.posted_date is not None
+    assert p.posted_date.tzinfo is not None
+    assert p.experience_min == 0
+    assert p.experience_max == 3
+    assert p.company == "Anthropic"
+
+
+def test_normalize_playwright_dom_path_no_description():
+    """DOM-path raw blob — no description → (None, None) from JD-scan."""
+    rp = RawPosting(
+        source_company="vercel",
+        source_adapter="playwright",
+        raw={
+            "title": "Junior Frontend Engineer",
+            "location": "Remote",
+            "posting_url": "https://vercel.com/careers/jr-fe",
+            "description": "",
+            "__dedup_key": "pw:vercel.com:abc1234567890def0",
+            "__host": "vercel.com",
+            "__extraction_path": "dom",
+        },
+    )
+    p = normalize(rp, _RUN_STARTED_AT)
+    assert p.dedup_key == "pw:vercel.com:abc1234567890def0"
+    assert p.experience_min is None
+    assert p.experience_max is None
+    # No date field → posted_date None.
+    assert p.posted_date is None
+
+
+def test_normalize_playwright_handles_missing_posted_date():
+    """No postingDate / postedAt keys → posted_date=None."""
+    rp = RawPosting(
+        source_company="x",
+        source_adapter="playwright",
+        raw={
+            "title": "Engineer",
+            "location": "NYC",
+            "posting_url": "https://x.example/jobs/1",
+            "description": "",
+            "__dedup_key": "pw:x.example:1",
+            "__host": "x.example",
+            "__extraction_path": "xhr",
+        },
+    )
+    p = normalize(rp, _RUN_STARTED_AT)
+    assert p.posted_date is None
+
+
+def test_normalize_playwright_handles_alternate_date_keys():
+    """`postedAt` (not `postingDate`) → still parsed."""
+    rp = RawPosting(
+        source_company="x",
+        source_adapter="playwright",
+        raw={
+            "title": "Engineer",
+            "location": "NYC",
+            "posting_url": "https://x.example/jobs/1",
+            "description": "",
+            "postedAt": "2026-06-02T09:00:00Z",
+            "__dedup_key": "pw:x.example:1",
+            "__host": "x.example",
+            "__extraction_path": "xhr",
+        },
+    )
+    p = normalize(rp, _RUN_STARTED_AT)
+    assert p.posted_date is not None
+    assert p.posted_date.isoformat() == "2026-06-02T09:00:00+00:00"
+
+
+def test_normalize_playwright_canonicalizes_url():
+    """URL canonicalization fires (utm_* stripped, fragment removed)."""
+    rp = RawPosting(
+        source_company="x",
+        source_adapter="playwright",
+        raw={
+            "title": "Engineer",
+            "location": "NYC",
+            "posting_url": (
+                "https://x.example/jobs/1?utm_source=hn&keep=yes#section"
+            ),
+            "description": "",
+            "__dedup_key": "pw:x.example:1",
+            "__host": "x.example",
+            "__extraction_path": "xhr",
+        },
+    )
+    p = normalize(rp, _RUN_STARTED_AT)
+    assert "utm_source" not in p.posting_url
+    assert "section" not in p.posting_url
+    assert "keep=yes" in p.posting_url
