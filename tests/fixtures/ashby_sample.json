@@ -1,0 +1,28 @@
+{
+  "jobs": [
+    {
+      "id": "aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb",
+      "title": "Software Engineer, New Grad",
+      "locationName": "San Francisco, CA",
+      "jobUrl": "https://jobs.ashbyhq.com/notion/aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb",
+      "publishedAt": "2026-06-01T14:00:00+00:00",
+      "descriptionPlain": "Join us as a New Grad SWE. Recent graduate encouraged to apply."
+    },
+    {
+      "id": "cccccccc-1111-2222-3333-dddddddddddd",
+      "title": "Staff Engineer, Platform",
+      "location": {"name": "Remote, US"},
+      "jobUrl": "https://jobs.ashbyhq.com/notion/cccccccc-1111-2222-3333-dddddddddddd?utm_source=careers",
+      "publishedAt": "2026-05-20T10:00:00+00:00",
+      "descriptionPlain": "8+ years experience required."
+    },
+    {
+      "id": "eeeeeeee-1111-2222-3333-ffffffffffff",
+      "title": "Junior Software Engineer",
+      "locationName": "New York, NY",
+      "jobUrl": "https://jobs.ashbyhq.com/notion/eeeeeeee-1111-2222-3333-ffffffffffff",
+      "publishedAt": "2026-06-05T08:30:00+00:00",
+      "descriptionPlain": "0-2 years experience. Entry-level role."
+    }
+  ]
+}

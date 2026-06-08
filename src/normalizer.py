@@ -117,6 +117,48 @@ def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
     )
 
 
+def _normalize_ashby(rp: RawPosting, run_started_at: datetime) -> Posting:
+    """Ashby-specific normalization (ADP-05).
+
+    Per <adapter_specifications> in 02-01-PLAN.md:
+      title:        raw["title"]
+      location:     coalesce(raw["locationName"], raw["location"]["name"])
+      posting_url:  canonicalize_url(raw["jobUrl"])
+      posted_date:  _parse_iso_to_utc(raw["publishedAt"])
+    """
+    raw = rp.raw
+    dedup_key = raw["__dedup_key"]
+    title = (raw.get("title") or "").strip()
+    # Coalesce: some tenants return flat "locationName", others {"location": {"name": ...}}.
+    location_name = raw.get("locationName")
+    if not location_name:
+        loc = raw.get("location") or {}
+        location_name = loc.get("name") if isinstance(loc, dict) else None
+    location = (location_name or "").strip()
+    posting_url = canonicalize_url(raw.get("jobUrl") or "")
+    posted_date = _parse_iso_to_utc(raw.get("publishedAt"))
+
+    company = rp.source_company
+    if company.islower():
+        company = company.capitalize()
+
+    return Posting(
+        dedup_key=dedup_key,
+        company=company,
+        title=title,
+        location=location,
+        salary=None,
+        experience_min=None,
+        experience_max=None,
+        posting_url=posting_url,
+        posted_date=posted_date,
+        first_seen=run_started_at,
+        last_seen=run_started_at,
+        still_listed=True,
+        source_adapter=rp.source_adapter,
+    )
+
+
 def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
     """Greenhouse-specific normalization.
 
@@ -156,6 +198,7 @@ def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
 _DISPATCH = {
     "greenhouse": _normalize_greenhouse,
     "lever": _normalize_lever,
+    "ashby": _normalize_ashby,
 }
 
 

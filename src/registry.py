@@ -9,6 +9,7 @@ code changes required (open/closed principle).
 """
 from __future__ import annotations
 
+from src.adapters.ashby import AshbyAdapter
 from src.adapters.base import Adapter
 from src.adapters.greenhouse import GreenhouseAdapter
 from src.adapters.lever import LeverAdapter
@@ -32,6 +33,7 @@ class NoAdapterFound(Exception):
 ADAPTERS: list[type[Adapter]] = [
     GreenhouseAdapter,
     LeverAdapter,
+    AshbyAdapter,
 ]
 
 
