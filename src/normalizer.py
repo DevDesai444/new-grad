@@ -19,6 +19,7 @@ from datetime import UTC, datetime
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from src.filter import extract_experience_range
+from src.locations import normalize_location
 from src.models import Posting, RawPosting
 
 # NORM-06 — tracking-param prefixes / exact names to strip during canonicalization.
@@ -133,6 +134,38 @@ def _read_playwright_description(raw: dict) -> str:
     return raw.get("description") or ""
 
 
+# ----- Phase 4 Plan 04-01 — per-adapter salary extraction (D-01 verbatim). ----
+# Each helper reads a source-specific JSON path; output is COPIED VERBATIM into
+# Posting.salary (no parsing, no currency conversion). Empty / missing /
+# non-dict shapes return "" so the renderer's placeholder-coalesce (D-01a)
+# can render "—" uniformly.
+
+_GREENHOUSE_SALARY_METADATA_NAMES = frozenset({
+    "salary", "salary range", "compensation range",
+    "pay range", "base pay range",
+})
+
+
+def _extract_greenhouse_salary(raw: dict) -> str:
+    """D-01: verbatim salary from raw['metadata'] (list of name/value dicts).
+
+    Iterates the metadata list and returns the FIRST non-empty `value` whose
+    `name.lower()` matches a known salary label. Returns "" if none match.
+    Defensive against non-list metadata and non-dict entries.
+    """
+    metadata = raw.get("metadata") or []
+    if not isinstance(metadata, list):
+        return ""
+    for entry in metadata:
+        if not isinstance(entry, dict):
+            continue
+        name = (entry.get("name") or "").strip().lower()
+        value = entry.get("value")
+        if name in _GREENHOUSE_SALARY_METADATA_NAMES and value:
+            return str(value).strip()
+    return ""
+
+
 def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
     """Lever-specific normalization (ADP-04).
 
@@ -146,7 +179,7 @@ def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
     dedup_key = raw["__dedup_key"]
     title = (raw.get("text") or "").strip()
     categories = raw.get("categories") or {}
-    location = (
+    location = normalize_location(
         (categories.get("location") or "").strip()
         if isinstance(categories, dict)
         else ""
@@ -162,6 +195,15 @@ def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
     # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
     exp_min, exp_max = extract_experience_range(_read_lever_description(raw))
 
+    # D-01 — salary verbatim. Lever prefers nested salaryRange.text, falls
+    # back to flat raw["salary"]. Defensive against salaryRange: None.
+    salary_range = raw.get("salaryRange") or {}
+    salary = (
+        (salary_range.get("text") if isinstance(salary_range, dict) else None)
+        or raw.get("salary")
+        or ""
+    )
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -171,7 +213,7 @@ def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
         company=company,
         title=title,
         location=location,
-        salary=None,
+        salary=salary,
         experience_min=exp_min,
         experience_max=exp_max,
         posting_url=posting_url,
@@ -200,12 +242,21 @@ def _normalize_ashby(rp: RawPosting, run_started_at: datetime) -> Posting:
     if not location_name:
         loc = raw.get("location") or {}
         location_name = loc.get("name") if isinstance(loc, dict) else None
-    location = (location_name or "").strip()
+    location = normalize_location((location_name or "").strip())
     posting_url = canonicalize_url(raw.get("jobUrl") or "")
     posted_date = _parse_iso_to_utc(raw.get("publishedAt"))
 
     # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
     exp_min, exp_max = extract_experience_range(_read_ashby_description(raw))
+
+    # D-01 — salary verbatim. Ashby exposes compensation.compensationTierSummary
+    # when includeCompensation=true is in the URL (already wired in
+    # src/adapters/ashby.py). Defensive against compensation: None / non-dict.
+    compensation = raw.get("compensation") or {}
+    if isinstance(compensation, dict):
+        salary = compensation.get("compensationTierSummary") or ""
+    else:
+        salary = ""
 
     company = rp.source_company
     if company.islower():
@@ -216,7 +267,7 @@ def _normalize_ashby(rp: RawPosting, run_started_at: datetime) -> Posting:
         company=company,
         title=title,
         location=location,
-        salary=None,
+        salary=salary,
         experience_min=exp_min,
         experience_max=exp_max,
         posting_url=posting_url,
@@ -251,9 +302,10 @@ def _normalize_smartrecruiters(rp: RawPosting, run_started_at: datetime) -> Post
     else:
         city = country = ""
     if city and country:
-        location = f"{city}, {country}"
+        composed = f"{city}, {country}"
     else:
-        location = city or country
+        composed = city or country
+    location = normalize_location(composed)
 
     # SR's "ref" is sometimes relative; defensive https:// prefix if needed.
     ref = (raw.get("ref") or "").strip()
@@ -268,6 +320,10 @@ def _normalize_smartrecruiters(rp: RawPosting, run_started_at: datetime) -> Post
         _read_smartrecruiters_description(raw),
     )
 
+    # D-01 — SmartRecruiters /postings endpoint does not expose a public salary
+    # field; intentionally empty until SR ever ships one.
+    salary = ""
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -277,7 +333,7 @@ def _normalize_smartrecruiters(rp: RawPosting, run_started_at: datetime) -> Post
         company=company,
         title=title,
         location=location,
-        salary=None,
+        salary=salary,
         experience_min=exp_min,
         experience_max=exp_max,
         posting_url=posting_url,
@@ -309,7 +365,7 @@ def _normalize_workday(rp: RawPosting, run_started_at: datetime) -> Posting:
     raw = rp.raw
     dedup_key = raw["__dedup_key"]
     title = (raw.get("title") or "").strip()
-    location = (raw.get("locationsText") or "").strip()
+    location = normalize_location((raw.get("locationsText") or "").strip())
     posting_url = canonicalize_url(raw.get("__posting_url") or "")
     # Adapter already resolved postedOn -> UTC datetime; just read it.
     # Defensive: if for some reason it's a string in raw (test fixture round-trip
@@ -325,6 +381,11 @@ def _normalize_workday(rp: RawPosting, run_started_at: datetime) -> Posting:
     # per-posting detail fetch) starts populating Experience automatically.
     exp_min, exp_max = extract_experience_range(_read_workday_description(raw))
 
+    # D-01 — Workday CXS /jobs endpoint does not expose salary; intentionally
+    # empty. Future per-posting detail fetch could stash raw["__salary"]
+    # (mirroring the Plan 02-03 __description hook).
+    salary = ""
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -334,7 +395,7 @@ def _normalize_workday(rp: RawPosting, run_started_at: datetime) -> Posting:
         company=company,
         title=title,
         location=location,
-        salary=None,
+        salary=salary,
         experience_min=exp_min,
         experience_max=exp_max,
         posting_url=posting_url,
@@ -356,7 +417,9 @@ def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
     # Adapter (Plan 01) guaranteed __dedup_key is present.
     dedup_key = raw["__dedup_key"]
     title = (raw.get("title") or "").strip()
-    location = ((raw.get("location") or {}).get("name") or "").strip()
+    location = normalize_location(
+        ((raw.get("location") or {}).get("name") or "").strip(),
+    )
     posting_url = canonicalize_url(raw.get("absolute_url") or "")
     posted_date = _parse_iso_to_utc(raw.get("updated_at"))
 
@@ -369,6 +432,9 @@ def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
         _read_greenhouse_description(raw),
     )
 
+    # D-01 — salary verbatim from raw["metadata"] (see _extract_greenhouse_salary).
+    salary = _extract_greenhouse_salary(raw)
+
     company = rp.source_company
     # Cosmetic: title-case if the board token came in lowercase ("stripe" -> "Stripe").
     if company.islower():
@@ -379,7 +445,7 @@ def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
         company=company,
         title=title,
         location=location,
-        salary=None,
+        salary=salary,
         experience_min=exp_min,
         experience_max=exp_max,
         posting_url=posting_url,
@@ -426,7 +492,8 @@ def _normalize_apple(rp: RawPosting, run_started_at: datetime) -> Posting:
     # `title`. First non-empty wins.
     title = (raw.get("postingTitle") or raw.get("title") or "").strip()
 
-    # Compose location from list of {"name": "..."} entries.
+    # Compose location from list of {"name": "..."} entries, THEN normalize
+    # (per Plan 04-01 Task 2 — compose first, normalize the composed string).
     locations = raw.get("locations") or []
     loc_names: list[str] = []
     if isinstance(locations, list):
@@ -435,7 +502,7 @@ def _normalize_apple(rp: RawPosting, run_started_at: datetime) -> Posting:
                 nm = (loc.get("name") or "").strip()
                 if nm:
                     loc_names.append(nm)
-    location = ", ".join(loc_names)
+    location = normalize_location(", ".join(loc_names))
 
     # Construct posting URL from positionId + slug (Apple doesn't return a
     # fully-formed URL — we build it).
@@ -457,6 +524,21 @@ def _normalize_apple(rp: RawPosting, run_started_at: datetime) -> Posting:
     # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
     exp_min, exp_max = extract_experience_range(_read_apple_description(raw))
 
+    # D-01 — Apple's response shape drifts; try the three known shapes in order
+    # per CONTEXT.md D-01 (postingPay.payRange.text, then top-level salaryRange,
+    # then homeOffice). First non-empty wins. Defensive against postingPay: None
+    # / non-dict.
+    posting_pay = raw.get("postingPay") or {}
+    pay_range = (
+        posting_pay.get("payRange") if isinstance(posting_pay, dict) else None
+    ) or {}
+    salary = (
+        (pay_range.get("text") if isinstance(pay_range, dict) else None)
+        or raw.get("salaryRange")
+        or raw.get("homeOffice")
+        or ""
+    )
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -466,7 +548,7 @@ def _normalize_apple(rp: RawPosting, run_started_at: datetime) -> Posting:
         company=company,
         title=title,
         location=location,
-        salary=None,
+        salary=salary,
         experience_min=exp_min,
         experience_max=exp_max,
         posting_url=posting_url,
@@ -496,7 +578,7 @@ def _normalize_playwright(rp: RawPosting, run_started_at: datetime) -> Posting:
     raw = rp.raw
     dedup_key = raw["__dedup_key"]
     title = (raw.get("title") or "").strip()
-    location = (raw.get("location") or "").strip()
+    location = normalize_location((raw.get("location") or "").strip())
     posting_url = canonicalize_url(raw.get("posting_url") or "")
     # Coalesce common date field names across SPA sites.
     posted_raw = (
@@ -512,6 +594,10 @@ def _normalize_playwright(rp: RawPosting, run_started_at: datetime) -> Posting:
         _read_playwright_description(raw),
     )
 
+    # D-01 — salary verbatim. Best-effort per D-01 note: when XHR/DOM extraction
+    # captured a salary string, use it; otherwise "".
+    salary = raw.get("salary") or ""
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -521,7 +607,7 @@ def _normalize_playwright(rp: RawPosting, run_started_at: datetime) -> Posting:
         company=company,
         title=title,
         location=location,
-        salary=None,
+        salary=salary,
         experience_min=exp_min,
         experience_max=exp_max,
         posting_url=posting_url,
