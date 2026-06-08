@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "last_run_utc": "2026-06-01T00:00:00+00:00",
+  "postings": {
+    "gh:stripe:42": {
+      "company": "Stripe",
+      "title": "New Grad SWE",
+      "location": "San Francisco, CA",
+      "salary": null,
+      "experience_min": null,
+      "experience_max": null,
+      "posting_url": "https://boards.greenhouse.io/stripe/jobs/42",
+      "posted_date": "2026-05-30T00:00:00+00:00",
+      "first_seen": "2026-05-30T00:00:00+00:00",
+      "last_seen": "2026-06-01T00:00:00+00:00",
+      "still_listed": true,
+      "source_adapter": "greenhouse"
+    }
+  }
+}
