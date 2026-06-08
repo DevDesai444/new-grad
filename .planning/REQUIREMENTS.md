@@ -32,7 +32,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Scraping Adapters (ADP)
 
 - [x] **ADP-01**: An `Adapter` ABC with `matches(url) -> bool` and `fetch(company) -> list[RawPosting]` defines the per-source contract
-- [ ] **ADP-02**: A URL-pattern registry dispatches each `companies.txt` entry to the right adapter; Playwright is the catch-all when nothing else matches
+- [x] **ADP-02**: A URL-pattern registry dispatches each `companies.txt` entry to the right adapter; Playwright is the catch-all when nothing else matches
 - [x] **ADP-03**: Greenhouse adapter — fetches `boards-api.greenhouse.io/v1/boards/<token>/jobs?content=true`, validates response via pydantic v2, emits stable key `gh:<company>:<id>`
 - [ ] **ADP-04**: Lever adapter — fetches `api.lever.co/v0/postings/<company>?mode=json`, stable key `lever:<company>:<uuid>`
 - [ ] **ADP-05**: Ashby adapter — fetches `api.ashbyhq.com/posting-api/job-board/<org>`, stable key `ashby:<org>:<uuid>`
@@ -49,44 +49,44 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Filtering (FILT)
 
-- [ ] **FILT-01**: Title-keyword filter includes: `new grad`, `new graduate`, `entry`, `entry-level`, `early career`, `early-career`, `junior`, `associate`, `university`, `recent graduate`, `class of 20XX`, and Roman/Arabic `I`/`1` level markers
-- [ ] **FILT-02**: Title-keyword filter excludes: `senior`, `sr.`, `staff`, `principal`, `lead`, `manager`, `director`, `head of`, `II`, `III`, `IV`, `V`, levels `2`/`3`/`4`/`5`+
+- [x] **FILT-01**: Title-keyword filter includes: `new grad`, `new graduate`, `entry`, `entry-level`, `early career`, `early-career`, `junior`, `associate`, `university`, `recent graduate`, `class of 20XX`, and Roman/Arabic `I`/`1` level markers
+- [x] **FILT-02**: Title-keyword filter excludes: `senior`, `sr.`, `staff`, `principal`, `lead`, `manager`, `director`, `head of`, `II`, `III`, `IV`, `V`, levels `2`/`3`/`4`/`5`+
 - [ ] **FILT-03**: JD-text scan extracts experience range using regex patterns (`X+ years`, `X-Y years`, `0-N years`, `recent graduate`, `entry level`) and populates `experience_min` / `experience_max`
-- [ ] **FILT-04**: A posting is kept if (title passes keyword gate) AND (extracted `experience_min ≤ 5` OR no experience range found)
-- [ ] **FILT-05**: When the title is ambiguous (no included or excluded keywords) and JD-scan finds no experience signal, the posting is included (bias toward inclusion at this gate, so the table doesn't miss things)
-- [ ] **FILT-06**: Filter logic is a pure function with no I/O; covered by unit tests with representative title/description fixtures
+- [x] **FILT-04**: A posting is kept if (title passes keyword gate) AND (extracted `experience_min ≤ 5` OR no experience range found)
+- [x] **FILT-05**: When the title is ambiguous (no included or excluded keywords) and JD-scan finds no experience signal, the posting is included (bias toward inclusion at this gate, so the table doesn't miss things)
+- [x] **FILT-06**: Filter logic is a pure function with no I/O; covered by unit tests with representative title/description fixtures
 
 ### Normalization & Extraction (NORM)
 
 - [x] **NORM-01**: A canonical `Posting` model includes: `dedup_key`, `company`, `title`, `location`, `salary`, `experience_min`, `experience_max`, `posting_url`, `posted_date`, `first_seen`, `last_seen`, `still_listed`, `source_adapter`
 - [ ] **NORM-02**: Salary extraction recognizes range (`$X–$Y`), ceiling (`up to $X`), hourly (`$X/hr`), and currency-prefixed formats; unparseable salary renders as `—`
 - [ ] **NORM-03**: Location normalization collapses `Remote, United States` / `Remote — US` / `Remote (USA)` to a consistent `Remote (US)` form
-- [ ] **NORM-04**: Posted date is extracted from the source adapter when exposed; missing dates leave `posted_date` null
-- [ ] **NORM-05**: All dates are normalized to UTC ISO 8601 strings
-- [ ] **NORM-06**: URL canonicalization strips known tracking params (`utm_*`, `gh_src`, `lever-source`), lowercases the host, and removes trailing slashes — applied to `posting_url` before storage
-- [ ] **NORM-07**: Markdown cell escaping handles pipe characters, newlines, and invisible Unicode (U+200B, U+200C, U+200D, U+FEFF, U+00A0, U+2060) in titles/locations
+- [x] **NORM-04**: Posted date is extracted from the source adapter when exposed; missing dates leave `posted_date` null
+- [x] **NORM-05**: All dates are normalized to UTC ISO 8601 strings
+- [x] **NORM-06**: URL canonicalization strips known tracking params (`utm_*`, `gh_src`, `lever-source`), lowercases the host, and removes trailing slashes — applied to `posting_url` before storage
+- [x] **NORM-07**: Markdown cell escaping handles pipe characters, newlines, and invisible Unicode (U+200B, U+200C, U+200D, U+FEFF, U+00A0, U+2060) in titles/locations
 
 ### State & Dedup (STATE)
 
-- [ ] **STATE-01**: All persistent state lives in `seen.json` at the repo root — a single dict keyed by per-ATS stable dedup key
-- [ ] **STATE-02**: Writes are atomic — write to `seen.json.tmp` then `os.replace()` (POSIX-atomic)
-- [ ] **STATE-03**: Reads tolerate corruption — on `json.JSONDecodeError`, fall back to `seen.json.bak` and log
-- [ ] **STATE-04**: Merge is add-only — new keys get `first_seen = run_started_at`; existing keys keep their `first_seen` and update `last_seen`; **keys are never deleted** (per user's "keep forever" requirement)
-- [ ] **STATE-05**: When a key seen in a previous run is missing from the current scan, `last_seen` stays unchanged and `still_listed` flips to `false`
-- [ ] **STATE-06**: Sanity gate aborts the commit if `len(new_postings_seen) < 0.9 * len(prior_postings_seen)` for a run where no adapter reported `SiteBlocked` — protects against mass-block silently wiping the table
-- [ ] **STATE-07**: `seen.json` is serialized via `orjson` with `OPT_SORT_KEYS` for deterministic git diffs
-- [ ] **STATE-08**: `seen.json` schema includes a `schema_version` field; loader validates it and refuses to run on unknown future versions
+- [x] **STATE-01**: All persistent state lives in `seen.json` at the repo root — a single dict keyed by per-ATS stable dedup key
+- [x] **STATE-02**: Writes are atomic — write to `seen.json.tmp` then `os.replace()` (POSIX-atomic)
+- [x] **STATE-03**: Reads tolerate corruption — on `json.JSONDecodeError`, fall back to `seen.json.bak` and log
+- [x] **STATE-04**: Merge is add-only — new keys get `first_seen = run_started_at`; existing keys keep their `first_seen` and update `last_seen`; **keys are never deleted** (per user's "keep forever" requirement)
+- [x] **STATE-05**: When a key seen in a previous run is missing from the current scan, `last_seen` stays unchanged and `still_listed` flips to `false`
+- [x] **STATE-06**: Sanity gate aborts the commit if `len(new_postings_seen) < 0.9 * len(prior_postings_seen)` for a run where no adapter reported `SiteBlocked` — protects against mass-block silently wiping the table
+- [x] **STATE-07**: `seen.json` is serialized via `orjson` with `OPT_SORT_KEYS` for deterministic git diffs
+- [x] **STATE-08**: `seen.json` schema includes a `schema_version` field; loader validates it and refuses to run on unknown future versions
 
 ### Output & Render (OUT)
 
-- [ ] **OUT-01**: `README.md` contains a section bracketed by `<!-- BEGIN JOBS -->` and `<!-- END JOBS -->` sentinels; the renderer overwrites only the content between sentinels
-- [ ] **OUT-02**: Table columns, in order: `| Company | Position | Location | Salary | Experience | Posting | Age |`
-- [ ] **OUT-03**: `Posting` column is a clickable Markdown link pointing to the canonicalized posting URL
-- [ ] **OUT-04**: `Age` renders the human-readable interval since `posted_date` if known, else since `first_seen` (e.g., `3h`, `2d`, `3w`)
-- [ ] **OUT-05**: `Experience` renders `Xy–Yy` if both bounds known, `≤Yy` if only max known, or blank if unknown
-- [ ] **OUT-06**: Table is sorted by `posted_date` descending (most recent first), then by company name ascending; sort is stable across runs given identical input
-- [ ] **OUT-07**: Renderer is a pure function — given identical input it produces byte-identical output (idempotent)
-- [ ] **OUT-08**: Render runs even when zero postings exist — the section between sentinels then contains a "(no matching postings yet)" placeholder
+- [x] **OUT-01**: `README.md` contains a section bracketed by `<!-- BEGIN JOBS -->` and `<!-- END JOBS -->` sentinels; the renderer overwrites only the content between sentinels
+- [x] **OUT-02**: Table columns, in order: `| Company | Position | Location | Salary | Experience | Posting | Age |`
+- [x] **OUT-03**: `Posting` column is a clickable Markdown link pointing to the canonicalized posting URL
+- [x] **OUT-04**: `Age` renders the human-readable interval since `posted_date` if known, else since `first_seen` (e.g., `3h`, `2d`, `3w`)
+- [x] **OUT-05**: `Experience` renders `Xy–Yy` if both bounds known, `≤Yy` if only max known, or blank if unknown
+- [x] **OUT-06**: Table is sorted by `posted_date` descending (most recent first), then by company name ascending; sort is stable across runs given identical input
+- [x] **OUT-07**: Renderer is a pure function — given identical input it produces byte-identical output (idempotent)
+- [x] **OUT-08**: Render runs even when zero postings exist — the section between sentinels then contains a "(no matching postings yet)" placeholder
 - [ ] **OUT-09**: A per-source health footer below the table shows `Company | Last seen | Status (ok/blocked/schema-drift/error)` for passive observability without notifications
 
 ### Credentials & Secrets (SEC)
@@ -169,7 +169,7 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | CFG-05 | Phase 1 | Pending |
 | CFG-06 | Phase 1 | Pending |
 | ADP-01 | Phase 1 | Complete |
-| ADP-02 | Phase 1 | Pending |
+| ADP-02 | Phase 1 | Complete |
 | ADP-03 | Phase 1 | Complete |
 | ADP-04 | Phase 2 | Pending |
 | ADP-05 | Phase 2 | Pending |
@@ -183,35 +183,35 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | ADP-13 | Phase 1 | Complete |
 | ADP-14 | Phase 1 | Pending |
 | ADP-15 | Phase 1 | Pending |
-| FILT-01 | Phase 1 | Pending |
-| FILT-02 | Phase 1 | Pending |
+| FILT-01 | Phase 1 | Complete |
+| FILT-02 | Phase 1 | Complete |
 | FILT-03 | Phase 2 | Pending |
-| FILT-04 | Phase 1 | Pending |
-| FILT-05 | Phase 1 | Pending |
-| FILT-06 | Phase 1 | Pending |
+| FILT-04 | Phase 1 | Complete |
+| FILT-05 | Phase 1 | Complete |
+| FILT-06 | Phase 1 | Complete |
 | NORM-01 | Phase 1 | Complete |
 | NORM-02 | Phase 4 | Pending |
 | NORM-03 | Phase 4 | Pending |
-| NORM-04 | Phase 1 | Pending |
-| NORM-05 | Phase 1 | Pending |
-| NORM-06 | Phase 1 | Pending |
-| NORM-07 | Phase 1 | Pending |
-| STATE-01 | Phase 1 | Pending |
-| STATE-02 | Phase 1 | Pending |
-| STATE-03 | Phase 1 | Pending |
-| STATE-04 | Phase 1 | Pending |
-| STATE-05 | Phase 1 | Pending |
-| STATE-06 | Phase 1 | Pending |
-| STATE-07 | Phase 1 | Pending |
-| STATE-08 | Phase 1 | Pending |
-| OUT-01 | Phase 1 | Pending |
-| OUT-02 | Phase 1 | Pending |
-| OUT-03 | Phase 1 | Pending |
-| OUT-04 | Phase 1 | Pending |
-| OUT-05 | Phase 1 | Pending |
-| OUT-06 | Phase 1 | Pending |
-| OUT-07 | Phase 1 | Pending |
-| OUT-08 | Phase 1 | Pending |
+| NORM-04 | Phase 1 | Complete |
+| NORM-05 | Phase 1 | Complete |
+| NORM-06 | Phase 1 | Complete |
+| NORM-07 | Phase 1 | Complete |
+| STATE-01 | Phase 1 | Complete |
+| STATE-02 | Phase 1 | Complete |
+| STATE-03 | Phase 1 | Complete |
+| STATE-04 | Phase 1 | Complete |
+| STATE-05 | Phase 1 | Complete |
+| STATE-06 | Phase 1 | Complete |
+| STATE-07 | Phase 1 | Complete |
+| STATE-08 | Phase 1 | Complete |
+| OUT-01 | Phase 1 | Complete |
+| OUT-02 | Phase 1 | Complete |
+| OUT-03 | Phase 1 | Complete |
+| OUT-04 | Phase 1 | Complete |
+| OUT-05 | Phase 1 | Complete |
+| OUT-06 | Phase 1 | Complete |
+| OUT-07 | Phase 1 | Complete |
+| OUT-08 | Phase 1 | Complete |
 | OUT-09 | Phase 4 | Pending |
 | SEC-01 | Phase 3 | Pending |
 | SEC-02 | Phase 3 | Pending |
