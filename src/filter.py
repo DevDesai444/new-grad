@@ -14,11 +14,16 @@ open-min ("X+ years"), and entry signals from job-description text. Output
 populates Posting.experience_min/experience_max via the per-adapter normalizer
 helpers; it NEVER gates inclusion. The Experience column in the rendered
 README displays these numbers per OUT-05.
+
+FILT-07 (Plan 04-02 — Phase 4 CONTEXT.md D-03): is_us_location_acceptable
+wraps src.locations.is_us_location and is wired into the orchestrator AFTER
+is_early_career — same pure-function discipline as FILT-06.
 """
 from __future__ import annotations
 
 import re
 
+from src.locations import is_us_location
 from src.models import Posting
 
 # FILT-01 — Include keywords. Tested via re.search so word-boundary anchors apply.
@@ -158,3 +163,25 @@ def extract_experience_range(
         return (0, None)
 
     return (None, None)
+
+
+# ----- FILT-07: US-only region filter (Plan 04-02 / CONTEXT.md D-03). ---------
+
+
+def is_us_location_acceptable(posting: Posting) -> bool:
+    """FILT-07: True for US / ambiguous / empty; False for non-US.
+
+    Wraps src.locations.is_us_location applied to posting.location.
+    Pure function per FILT-06 + Phase 4 CONTEXT.md D-03.
+
+    Order in orchestrator (D-03a): is_early_career (title-keyword gate) →
+    is_us_location_acceptable (FILT-07) → state merge. Postings dropped
+    here are NEVER stored in seen.json (STATE-04's "never delete" still
+    applies to entries already stored before FILT-07 shipped — see
+    CONTEXT.md D-03a).
+
+    Ambiguous / empty locations are KEPT (bias toward inclusion per
+    FILT-05) — this is an explicit re-affirmation of FILT-05 at the
+    location-filter layer; is_us_location returns True in those cases.
+    """
+    return is_us_location(posting.location)
