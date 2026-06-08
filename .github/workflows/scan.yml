@@ -1,0 +1,59 @@
+name: scan
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # Hourly UTC; cron drift up to ~60 min on free tier is normal (PITFALLS.md Pitfall 19, 23)
+  workflow_dispatch:       # Manual trigger for testing / catch-up
+
+permissions:
+  contents: write          # INFRA-02 — required for git-auto-commit-action to push (Pitfall 16 mitigation)
+
+concurrency:
+  group: scan              # INFRA-02 — serializes runs to prevent racing git push (Pitfall 3 mitigation)
+  cancel-in-progress: false  # Never cancel in-flight runs (would orphan seen.json.tmp)
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50    # INFRA-01 — hard ceiling under the 60-min cron interval
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install uv
+        run: pipx install uv
+
+      - name: Install Python dependencies
+        run: uv pip install --system -r requirements.lock
+
+      - name: Cache Playwright browsers
+        # INFRA-04 — cache wired now so Phase 3 (when Playwright is actually installed)
+        # hits the cache on first run without a cache-key change. Cache miss is harmless in Phase 1
+        # because we don't invoke `playwright install` here.
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements.lock') }}
+
+      - name: Run scan
+        # Plan 03 creates src/main.py. Until Plan 03 ships, this step is a no-op stub
+        # that exits 0 — workflow YAML is valid and CI green from day one.
+        # The placeholder echoes a recognizable string so test_workflow_yaml can grep for it.
+        run: |
+          if [ -f src/main.py ]; then
+            python -m src.main
+          else
+            echo "scan.yml: src/main.py not yet built — Plan 03 will land it. Exiting 0."
+          fi
+
+      - name: Commit and push changes
+        # INFRA-10, RUN-03 — git-auto-commit-action@v5 skips when no diff (default behavior).
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(scan): hourly update"
+          file_pattern: "README.md seen.json"

@@ -1,0 +1,18 @@
+# Core HTTP / parsing
+httpx[http2]>=0.27,<1.0
+tenacity>=8.2
+selectolax>=0.3.21
+beautifulsoup4>=4.12
+
+# Headless browser (Chromium only) — NOT installed in Phase 1 per CONTEXT.md D-05;
+# version pinned so requirements.lock hash includes them and Phase 3 cache hits cleanly.
+playwright>=1.45
+playwright-stealth>=1.0.6
+
+# Data
+pydantic>=2.7
+orjson>=3.10
+dateparser>=1.2
+
+# Local dev only
+python-dotenv>=1.0

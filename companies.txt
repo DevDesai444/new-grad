@@ -1,0 +1,7 @@
+# companies.txt — one career URL per line.
+# Blank lines and lines starting with `#` are ignored.
+# Phase 1 supports Greenhouse only — other ATSes (Lever / Ashby / SmartRecruiters / Workday / Apple)
+# land in Phase 2. Non-Greenhouse URLs added before Phase 2 are silently skipped per CFG-05.
+#
+# Example (uncomment when ready):
+# https://boards.greenhouse.io/stripe

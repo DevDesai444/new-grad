@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Secrets (Pitfall 4 mitigation — never commit credentials to public repo)
+.env
+.env.*
+!.env.example
+cookies.json
+auth_state.json
+*.har
+trace.zip
+playwright-report/
+
+# State store transient files (Pitfall 1 mitigation — atomic write artifacts must never be committed)
+seen.json.tmp
+seen.json.bak
+
+# OS
+.DS_Store
+Thumbs.db
