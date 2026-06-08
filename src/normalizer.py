@@ -215,6 +215,56 @@ def _normalize_smartrecruiters(rp: RawPosting, run_started_at: datetime) -> Post
     )
 
 
+def _normalize_workday(rp: RawPosting, run_started_at: datetime) -> Posting:
+    """Workday-specific normalization (ADP-07).
+
+    Per <adapter_specifications> in 02-02-PLAN.md:
+      title:        raw["title"]
+      location:     raw["locationsText"]
+      posting_url:  canonicalize_url(raw["__posting_url"])  (already tenant-prefixed)
+      posted_date:  raw["__posted_date_utc"]                (already resolved by adapter
+                                                             across all 3 wire forms;
+                                                             defensive: if it round-tripped
+                                                             through JSON as an ISO string,
+                                                             reparse)
+
+    The Workday CXS jobs endpoint does NOT return per-posting description text,
+    so `experience_min` / `experience_max` are left None — JD-scan (FILT-03 in
+    Plan 02-03) will look up description text separately if/when it lands.
+    """
+    raw = rp.raw
+    dedup_key = raw["__dedup_key"]
+    title = (raw.get("title") or "").strip()
+    location = (raw.get("locationsText") or "").strip()
+    posting_url = canonicalize_url(raw.get("__posting_url") or "")
+    # Adapter already resolved postedOn -> UTC datetime; just read it.
+    # Defensive: if for some reason it's a string in raw (test fixture round-trip
+    # via JSON could turn datetime -> ISO string), reparse.
+    posted_date = raw.get("__posted_date_utc")
+    if isinstance(posted_date, str):
+        posted_date = _parse_iso_to_utc(posted_date)
+
+    company = rp.source_company
+    if company.islower():
+        company = company.capitalize()
+
+    return Posting(
+        dedup_key=dedup_key,
+        company=company,
+        title=title,
+        location=location,
+        salary=None,
+        experience_min=None,
+        experience_max=None,
+        posting_url=posting_url,
+        posted_date=posted_date,
+        first_seen=run_started_at,
+        last_seen=run_started_at,
+        still_listed=True,
+        source_adapter=rp.source_adapter,
+    )
+
+
 def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
     """Greenhouse-specific normalization.
 
@@ -256,6 +306,7 @@ _DISPATCH = {
     "lever": _normalize_lever,
     "ashby": _normalize_ashby,
     "smartrecruiters": _normalize_smartrecruiters,
+    "workday": _normalize_workday,
 }
 
 

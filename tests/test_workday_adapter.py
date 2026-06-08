@@ -308,3 +308,272 @@ def test_fetch_sends_realistic_user_agent(workday_fixture, nvidia_company):
     assert "python-httpx" not in sent_headers.get("User-Agent", "")
     assert sent_headers.get("Content-Type") == "application/json"
     assert sent_headers.get("Accept") == "application/json"
+
+
+# ============================================================================
+# Task 2: D-04 pagination + sort-monotonicity + normalizer dispatch tests.
+# ============================================================================
+
+
+def _make_posting(req_id: int, *, posted_on=1748707200000) -> dict:
+    """Build a Workday-shaped posting dict with a unique bulletFields[0]."""
+    return {
+        "title": f"Software Engineer {req_id}",
+        "externalPath": (
+            f"/en-US/NVIDIAExternalCareerSite/job/Test/SWE_R-{req_id}"
+        ),
+        "locationsText": "US, CA, Santa Clara",
+        "postedOn": posted_on,
+        "bulletFields": [f"R-{req_id}"],
+    }
+
+
+def _make_page(req_ids: list[int], *, posted_on=1748707200000) -> dict:
+    return {
+        "total": len(req_ids),
+        "jobPostings": [
+            _make_posting(i, posted_on=posted_on) for i in req_ids
+        ],
+    }
+
+
+# --- Pagination (D-04) -------------------------------------------------------
+
+
+@respx.mock
+def test_fetch_paginates_until_empty_page(nvidia_company, monkeypatch):
+    """Page 0: 20 postings. Page 1: 20. Page 2: 0 -> stop. Return 40 total."""
+    monkeypatch.setattr("src.adapters.workday.time.sleep", lambda s: None)
+    page0 = _make_page(list(range(20)))
+    page1 = _make_page(list(range(20, 40)))
+    page2 = {"total": 40, "jobPostings": []}
+    route = respx.post(_API).mock(side_effect=[
+        httpx.Response(200, json=page0),
+        httpx.Response(200, json=page1),
+        httpx.Response(200, json=page2),
+    ])
+    raw = WorkdayAdapter().fetch(nvidia_company)
+    assert len(raw) == 40
+    # Three POST requests sent (page 0, 1, 2).
+    assert route.call_count == 3
+
+
+@respx.mock
+def test_fetch_paginates_until_seen_keys_overlap(nvidia_company, monkeypatch):
+    """When seen_keys hits the last-on-page key, stop without requesting next page."""
+    monkeypatch.setattr("src.adapters.workday.time.sleep", lambda s: None)
+    page0 = _make_page(list(range(20)))             # ids 0..19; last = R-19
+    page1 = _make_page(list(range(20, 40)))         # ids 20..39; last = R-39
+    page2 = _make_page(list(range(40, 60)))         # not expected to be reached
+    route = respx.post(_API).mock(side_effect=[
+        httpx.Response(200, json=page0),
+        httpx.Response(200, json=page1),
+        httpx.Response(200, json=page2),
+    ])
+    raw = WorkdayAdapter().fetch(
+        nvidia_company, seen_keys={"wd:nvidia:R-39"}
+    )
+    # Pages 0 + 1 fully collected; page 2 NOT requested.
+    assert len(raw) == 40
+    assert route.call_count == 2
+
+
+@respx.mock
+def test_fetch_cold_start_cap_25_pages(nvidia_company, monkeypatch):
+    """Cold start (no seen_keys) caps at 25 pages even if source has more."""
+    monkeypatch.setattr("src.adapters.workday.time.sleep", lambda s: None)
+    # Build 30 pages of 20 postings each (each posting must have a unique
+    # bulletFields[0] so dedup keys don't collide).
+    pages = [
+        httpx.Response(
+            200, json=_make_page(list(range(p * 20, (p + 1) * 20))),
+        )
+        for p in range(30)
+    ]
+    route = respx.post(_API).mock(side_effect=pages)
+    raw = WorkdayAdapter().fetch(nvidia_company)
+    assert len(raw) == 25 * 20  # 500 postings, hard cap
+    assert route.call_count == 25
+
+
+@respx.mock
+def test_fetch_short_page_breaks_loop(nvidia_company, monkeypatch):
+    """A page of fewer than _PAGE_SIZE postings ends pagination."""
+    monkeypatch.setattr("src.adapters.workday.time.sleep", lambda s: None)
+    # Single short page (5 postings) -> stop after 1 request.
+    short_page = _make_page(list(range(5)))
+    route = respx.post(_API).mock(side_effect=[
+        httpx.Response(200, json=short_page),
+    ])
+    raw = WorkdayAdapter().fetch(nvidia_company)
+    assert len(raw) == 5
+    assert route.call_count == 1
+
+
+# --- Sort-monotonicity check -------------------------------------------------
+
+
+@respx.mock
+def test_fetch_sort_monotonicity_violation_logs_warning(
+    nvidia_company, monkeypatch, caplog,
+):
+    """If page N+1's first is newer than page N's last, log + suppress early-term."""
+    import logging
+    monkeypatch.setattr("src.adapters.workday.time.sleep", lambda s: None)
+    # Page 0's last posting is "5 days ago"; page 1's first is "Posted Today"
+    # (newer). Use string postedOn so the relative-form parser resolves them.
+    # Build page 0 as 20 postings with explicit per-posting postedOn — the LAST
+    # one is "5 Days Ago".
+    page0_postings = [_make_posting(i, posted_on="Posted Today") for i in range(19)]
+    page0_postings.append(_make_posting(19, posted_on="Posted 5 Days Ago"))
+    page0 = {"total": 40, "jobPostings": page0_postings}
+
+    # Page 1: first posting is "Posted Today" (newer than page 0's "5 Days Ago").
+    page1_postings = [_make_posting(20, posted_on="Posted Today")]
+    page1_postings.extend(
+        _make_posting(i, posted_on="Posted 5 Days Ago")
+        for i in range(21, 40)
+    )
+    page1 = {"total": 40, "jobPostings": page1_postings}
+
+    # Page 2: empty -> stop normally.
+    page2 = {"total": 40, "jobPostings": []}
+
+    respx.post(_API).mock(side_effect=[
+        httpx.Response(200, json=page0),
+        httpx.Response(200, json=page1),
+        httpx.Response(200, json=page2),
+    ])
+
+    with caplog.at_level(logging.WARNING, logger="scan"):
+        raw = WorkdayAdapter().fetch(nvidia_company)
+
+    # All 40 postings collected (no early break — we DON'T stop on monotonicity
+    # violation; we only suppress further early-termination).
+    assert len(raw) == 40
+
+    # Warning logged with the canonical phrase.
+    monotonicity_warnings = [
+        rec for rec in caplog.records
+        if rec.levelno == logging.WARNING
+        and "sort-monotonicity violation" in rec.getMessage()
+    ]
+    assert len(monotonicity_warnings) == 1, (
+        f"expected 1 monotonicity warning, got "
+        f"{[r.getMessage() for r in caplog.records]}"
+    )
+
+
+# --- Normalizer dispatch -----------------------------------------------------
+
+
+def test_normalize_workday_roundtrip(run_started_at):
+    """Build a RawPosting with adapter-stashed metadata; verify normalize() output."""
+    from src.models import RawPosting
+    from src.normalizer import canonicalize_url, normalize
+
+    posted = datetime(2026, 5, 31, 17, 20, tzinfo=UTC)
+    raw = {
+        "title": "Software Engineer, New Grad",
+        "locationsText": "US, CA, Santa Clara",
+        "externalPath": (
+            "/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/SWE_R-101"
+        ),
+        "postedOn": 1748707200000,
+        "bulletFields": ["R-101"],
+        "__dedup_key": "wd:nvidia:R-101",
+        "__tenant": "nvidia",
+        "__posting_url": (
+            "https://nvidia.wd5.myworkdayjobs.com"
+            "/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/SWE_R-101"
+        ),
+        "__posted_date_utc": posted,
+    }
+    rp = RawPosting(
+        source_company="nvidia",
+        source_adapter="workday",
+        raw=raw,
+    )
+    posting = normalize(rp, run_started_at)
+
+    assert posting.dedup_key == "wd:nvidia:R-101"
+    assert posting.title == "Software Engineer, New Grad"
+    assert posting.location == "US, CA, Santa Clara"
+    assert posting.posting_url == canonicalize_url(raw["__posting_url"])
+    assert posting.posted_date == posted
+    assert posting.experience_min is None
+    assert posting.experience_max is None
+    assert posting.source_adapter == "workday"
+    # Company is title-cased from lowercase source value.
+    assert posting.company == "Nvidia"
+    assert posting.first_seen == run_started_at
+    assert posting.last_seen == run_started_at
+    assert posting.still_listed is True
+
+
+def test_normalize_workday_missing_postedon_yields_none_date(run_started_at):
+    """If __posted_date_utc is None, the normalized Posting has posted_date=None."""
+    from src.models import RawPosting
+    from src.normalizer import normalize
+
+    raw = {
+        "title": "Engineer",
+        "locationsText": "Remote",
+        "__dedup_key": "wd:nvidia:R-X",
+        "__tenant": "nvidia",
+        "__posting_url": (
+            "https://nvidia.wd5.myworkdayjobs.com/job/X"
+        ),
+        "__posted_date_utc": None,
+    }
+    rp = RawPosting(
+        source_company="nvidia",
+        source_adapter="workday",
+        raw=raw,
+    )
+    posting = normalize(rp, run_started_at)
+    assert posting.posted_date is None
+
+
+def test_normalize_workday_iso_string_round_trip(run_started_at):
+    """Defensive: if __posted_date_utc round-trips through JSON as a string, reparse."""
+    from src.models import RawPosting
+    from src.normalizer import normalize
+
+    raw = {
+        "title": "Engineer",
+        "locationsText": "Remote",
+        "__dedup_key": "wd:nvidia:R-Y",
+        "__tenant": "nvidia",
+        "__posting_url": (
+            "https://nvidia.wd5.myworkdayjobs.com/job/Y"
+        ),
+        "__posted_date_utc": "2026-06-01T14:00:00+00:00",
+    }
+    rp = RawPosting(
+        source_company="nvidia",
+        source_adapter="workday",
+        raw=raw,
+    )
+    posting = normalize(rp, run_started_at)
+    assert posting.posted_date == datetime(2026, 6, 1, 14, 0, tzinfo=UTC)
+
+
+# --- Registry contract -------------------------------------------------------
+
+
+def test_workday_registered_in_adapters_list():
+    from src.registry import ADAPTERS
+
+    names = [cls.name for cls in ADAPTERS]
+    assert "workday" in names
+    assert WorkdayAdapter in ADAPTERS
+
+
+def test_workday_dispatch_via_registry(nvidia_company):
+    """Registry returns a WorkdayAdapter instance for the Workday URL."""
+    from src.registry import get_adapter
+
+    adapter = get_adapter(nvidia_company)
+    assert isinstance(adapter, WorkdayAdapter)
+

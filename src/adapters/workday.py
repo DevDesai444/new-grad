@@ -190,20 +190,105 @@ class WorkdayAdapter(Adapter):
         company: CompanyConfig,
         seen_keys: set[str] | None = None,
     ) -> list[RawPosting]:
-        """Single-page fetch (offset=0). Task 2 wraps this in a pagination loop.
+        """Fetch all Workday postings for ``company``, paginating per D-04.
 
-        The ``seen_keys`` kwarg is accepted for forward-compatibility with Task 2's
-        pagination + early-termination; on Task 1's single-page path it is ignored.
+        Args:
+          company: CompanyConfig with a Workday careers URL.
+          seen_keys: optional set of dedup keys already in seen.json for this
+                     company. When provided, pagination early-terminates as soon
+                     as the last posting on a page is already known. When None
+                     (Phase 1 Adapter.fetch contract), pagination runs to the
+                     25-page cold-start cap.
+
+        Raises:
+          SchemaDrift: malformed URL OR malformed response (missing keys / wrong
+                       types).
+          SiteBlocked: HTTP 403 / 429 / 5xx from any page.
+
+        Notes on D-04 algorithm:
+          1. Cold-start cap = _COLD_START_CAP_PAGES (25) — hard ceiling on the
+             very first scrape of a company (no seen_keys, no early-termination
+             signal).
+          2. Empty-page break — source has returned all results.
+          3. Short-page break — fewer than _PAGE_SIZE postings means implicit
+             end-of-results on most Workday tenants.
+          4. Early-termination — when seen_keys is provided AND the last posting
+             on the current page is already known, the rest of the (DESC-sorted)
+             results are older + known, so we stop.
+          5. Sort-monotonicity sanity check — if a tenant ignored our ``sortBy``
+             implicit DESC ordering (Workday CXS body doesn't currently include
+             an explicit sort key but the default is newest-first), we detect by
+             comparing first-of-this-page vs last-of-previous-page. On violation
+             we log a warning AND suppress early-termination for the remainder
+             of this run (degrades to cap-only, which is correct + safe).
+          6. Inter-page sleep — random 0.5-1.5s jitter between pages. This is
+             monkey-patched to noop in slow tests; production keeps it.
         """
         parts = _parse_workday_url(company.url)
         api_url = (
             f"https://{parts.tenant}.wd{parts.wd_num}.myworkdayjobs.com"
             f"/wday/cxs/{parts.tenant}/{parts.site}/jobs"
         )
+        # Capture a single run_started_at for this fetch — relative postedOn
+        # forms ("Posted Today" etc.) need a stable reference within the call.
         run_started_at = datetime.now(UTC)
-        return self._fetch_page_and_emit(
-            api_url, parts, company, offset=0, run_started_at=run_started_at,
-        )
+
+        collected: list[RawPosting] = []
+        last_posted_per_page: list[datetime | None] = []
+        suppress_early_term = False  # flipped True on sort-monotonicity violation
+
+        for page_n in range(_COLD_START_CAP_PAGES):
+            offset = page_n * _PAGE_SIZE
+            page_postings = self._fetch_page_and_emit(
+                api_url, parts, company,
+                offset=offset, run_started_at=run_started_at,
+            )
+            if not page_postings:
+                break  # source has no more results
+            collected.extend(page_postings)
+
+            # D-04 early-termination: if seen_keys is provided AND the last
+            # posting on this page is already in it, the rest is older + known.
+            if (
+                seen_keys is not None
+                and not suppress_early_term
+                and page_postings[-1].raw["__dedup_key"] in seen_keys
+            ):
+                break
+
+            # D-04 sort-monotonicity check (page 1 onwards). If the first posting
+            # on this page is NEWER than the last posting on the previous page,
+            # the tenant ignored sort ordering — log + degrade to cap-only.
+            if page_n > 0 and last_posted_per_page:
+                prev_last_date = last_posted_per_page[-1]
+                curr_first_date = page_postings[0].raw.get("__posted_date_utc")
+                if (
+                    prev_last_date is not None
+                    and curr_first_date is not None
+                    and curr_first_date > prev_last_date
+                ):
+                    logger.warning(
+                        "Workday %s: sort-monotonicity violation on page %d "
+                        "(curr_first=%s newer than prev_last=%s) — tenant "
+                        "ignored sortBy; falling back to cold-start cap",
+                        company.name, page_n,
+                        curr_first_date.isoformat(), prev_last_date.isoformat(),
+                    )
+                    suppress_early_term = True
+            last_posted_per_page.append(
+                page_postings[-1].raw.get("__posted_date_utc")
+            )
+
+            # Implicit end-of-results: short page (fewer than _PAGE_SIZE entries).
+            if len(page_postings) < _PAGE_SIZE:
+                break
+
+            # Per CONTEXT.md Claude's-Discretion: brief inter-page sleep for
+            # Workday only, to reduce 429 risk on tenants with strict rate limits.
+            if page_n + 1 < _COLD_START_CAP_PAGES:
+                time.sleep(random.uniform(0.5, 1.5))
+
+        return collected
 
     def _fetch_page_and_emit(
         self,
@@ -316,8 +401,8 @@ class WorkdayAdapter(Adapter):
         return result
 
 
-# Re-export pagination knob constants so future tests + Task 2 can import them
-# without reaching into private module internals.
+# Re-export pagination knob constants so external callers + tests can import
+# them without reaching into private module internals.
 __all__ = [
     "WorkdayAdapter",
     "WorkdayURLParts",
@@ -327,8 +412,3 @@ __all__ = [
     "_PAGE_SIZE",
     "_USER_AGENT",
 ]
-
-# `random` is imported for Task 2's inter-page sleep jitter; reference it here so
-# the linter doesn't strip the import when Task 1 ships alone.
-_ = random
-_ = time
