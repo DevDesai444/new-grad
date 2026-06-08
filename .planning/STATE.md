@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plan 03-02 execute-complete — PlaywrightAdapter (XHR-intercept + DOM-fallback + stealth + 60s timeout + trace policy) landed and wired into registry as catch-all LAST; ready for Plan 03-03 (credential workflow)
-last_updated: "2026-06-08T14:30:00.000Z"
+stopped_at: Plan 03-03 execute-complete — Phase 3 closed. InvalidCredential typed exception + PlaywrightAdapter credential flow (SCRAPER_<COMPANY>_<KIND> env-var reads; MissingCredential/InvalidCredential typed errors; SEC-03 structural enforcement via grep audit) + CLAUDE.md "Adding a Company" 5-step workflow (per D-03 + D-03a) + README.md SEC-06 credential-naming convention with per-adapter audit table. All 6 Phase 3 REQ-IDs closed (ADP-09, ADP-10, SEC-01, SEC-02, SEC-04, SEC-06). 375 cumulative tests (+27 net). ADP-14/15 re-proven a sixth time. Ready for /gsd-verify-phase 3.
+last_updated: "2026-06-08T15:54:45.330Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
-  percent: 89
+  completed_plans: 9
+  percent: 100
 ---
 
 # STATE: new-grad
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 03 (Playwright Fallback + Credential Workflow) — EXECUTING
-Plan: 3 of 3
+Phase: 03 (Playwright Fallback + Credential Workflow) — EXECUTE-COMPLETE
+Plan: 3 of 3 done — awaiting verification
 **Milestone:** v1
-**Phase:** 3 — Playwright Fallback + Credential Workflow
-**Plan:** 03-02 complete — PlaywrightAdapter (`src/adapters/playwright_fallback.py`) with XHR-intercept-first + DOM-selector fallback + playwright-stealth on by default + 60s navigation timeout + trace=off-in-prod (SCRAPER_DEBUG_TRACE escape hatch) + `pw:<host>:<id>` dedup keys; wired into registry as catch-all LAST per D-01c (now 7 adapters); normalizer gained `_normalize_playwright` + `_read_playwright_description` (commits 7202dc0 Task 1, ac6f40f Task 2); 348 cumulative tests passing (+32 new: 22 adapter + 5 normalizer + 5 registry — net +10 after 2 NoAdapterFound tests rewritten as PlaywrightAdapter dispatch tests). ADP-09 + ADP-10 closed. ADP-14/15 re-proven: zero edits to any of the 6 existing src/adapters/{greenhouse,lever,ashby,smartrecruiters,workday,apple}.py.
-**Status:** Executing Phase 03
-**Progress:** [█████████░] 89%
+**Phase:** 3 — Playwright Fallback + Credential Workflow — EXECUTE-COMPLETE
+**Plan:** 03-03 complete — InvalidCredential typed exception in `src/adapters/base.py` (additive — pairs with MissingCredential); PlaywrightAdapter credential flow extending `src/adapters/playwright_fallback.py` with `_detect_login_form` + `_company_to_secret_prefix` + `_attempt_login` (reads SCRAPER_<COMPANY_UPPERCASE>_<KIND> env vars; raises MissingCredential on unset, InvalidCredential on form-persists-after-submit; `from None` suppresses chained traceback per D-02c); single-line orchestrator catch-tuple extension in `src/main.py` (import + tuple include InvalidCredential); CLAUDE.md `## Adding a Company` 5-step workflow (Step 1 try existing adapters → Step 2 resolve redirects → Step 3 Playwright catch-all → Step 4 write new adapter → Step 5 credential branch) per D-03 + D-03a; README.md `## Credential Naming Convention (SEC-06)` with per-adapter audit table + gh secret list/set/delete commands + SEC-04 names-only reminder. 27 net new tests (+3 base/orch unit + 13 playwright credential + 10 credential_flow integration+docs); 375 cumulative passing. ADP-14/15 re-proven a sixth time (zero edits to the 6 ATS adapter files; base.py is APPEND-ONLY). All 6 Phase 3 REQ-IDs closed (ADP-09 + ADP-10 from Plan 03-02; SEC-01 + SEC-02 + SEC-04 + SEC-06 from Plan 03-03). Commits: 86397ed Task 1, 9e8a6dd Task 2, 87912d7 Task 3.
+**Status:** Phase 03 execute-complete; ready for `/gsd-verify-phase 3`
+**Progress:** [██████████] 100%
 
 ### Phase 1 Goal
 
@@ -47,10 +47,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Performance Metrics
 
-- **Phases complete:** 0/4 (Phase 1 + Phase 2 both execute-complete, awaiting verification; Phase 3 waves 1+2/3 complete)
+- **Phases complete:** 0/4 (Phase 1 + Phase 2 + Phase 3 all execute-complete, awaiting verification)
 - **Requirements mapped:** 71/71 (100%)
-- **Requirements validated:** 64/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03; ADP-09 + ADP-10 closed by Plan 03-02 PlaywrightAdapter)
-- **Plans complete:** 8/9 (3/3 Phase 01 + 3/3 Phase 02 + 2/3 Phase 03 — Plan 03-02: ~25min, 2 tasks, 4 created + 5 modified files, 32 net new tests / 348 cumulative)
+- **Requirements validated:** 68/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03 + ADP-09 + ADP-10 in Plan 03-02 + SEC-01 + SEC-02 + SEC-04 + SEC-06 in Plan 03-03)
+- **Plans complete:** 9/9 (3/3 Phase 01 + 3/3 Phase 02 + 3/3 Phase 03 — Plan 03-03: 31min, 3 tasks, 1 created + 8 modified files, 27 net new tests / 375 cumulative)
 - **Existential risks addressed:** 5/5 in Phase 01 (unchanged)
 
 ### Per-Plan Metrics
@@ -65,6 +65,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 02    | 03   | ~30min   | 3     | 10 (3 new + 7 mod) |
 | 03    | 01   | ~10min   | 2     | 11 (3 new + 8 mod) |
 | 03    | 02   | ~25min   | 2     | 9 (4 new + 5 mod)  |
+| 03    | 03   | 31min    | 3     | 9 (1 new + 8 mod)  |
 
 ## Accumulated Context
 
@@ -142,6 +143,15 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 03-02 | NoAdapterFound docstring updated to note Phase 3 catch-all eliminates the error for http(s) URLs | Diagnostic clarity — future readers see WHY NoAdapterFound is now nearly-unreachable instead of being puzzled. |
 | 03-02 | Ship 32 net new tests (22 adapter + 5 normalizer + 5 registry) vs plan's "≥20-25" budget | Granular split per behavior (matches() 3 cases, hint parse 5, id extraction 3, XHR/DOM/timeout 3, dedup key 2, stealth 2, trace 2, catch-all/default 2 in adapter; 5 normalizer including alt-date-key + URL canonicalization; 5 registry covering all dispatch orderings). Defends each documented behavior with its own regression signal. |
 | 03-02 | Manually installed Chromium via `playwright install chromium` before running tests | Local dev environment didn't have Chromium cached. In CI, Plan 03-01's workflow step (`playwright install --with-deps chromium`) + `actions/cache@v4` handle this. Tests fail-fast with clear error if Chromium absent — no silent skip. |
+| 03-03 | InvalidCredential added to base.py as APPEND-ONLY change | MissingCredential + 3 Phase 1 typed exceptions left untouched; ADP-14/15 invariant preserved for sixth time. test_typed_errors_are_distinct_classes count bumped 4 -> 5 to reflect the new class. |
+| 03-03 | Credential gate placed AFTER initial navigation but BEFORE `expect_response` block | Initial `page.goto` exposes the DOM for `_detect_login_form` heuristic; if login present, `_attempt_login` runs to completion (raises typed errors on failure); the existing XHR-intercept block then re-navigates inside `page.expect_response` so the fresh post-auth response captures cleanly. Initial-nav PlaywrightTimeoutError is swallowed via try/pass — downstream block may still race a redirect successfully. |
+| 03-03 | `raise InvalidCredential(...) from None` everywhere | D-02c — suppresses `__cause__` chain that could leak DOM text (including the typed email) through the chained traceback. Mirrors Phase 1's SEC-03 hygiene. |
+| 03-03 | `_company_to_secret_prefix` is a class @staticmethod on PlaywrightAdapter (not module-level) | Co-locates the SEC-02 naming convention with the only adapter that uses it; tests reference `PlaywrightAdapter._company_to_secret_prefix(...)` — unambiguous. Same shape as `_detect_login_form`. |
+| 03-03 | 13 PlaywrightAdapter credential tests vs plan's "~7" target | Granular split: 3 prefix cases + 2 detection + 2 missing-cred + 1 invalid-cred + 1 message-leak audit + 1 D-02a wiring + 1 no-login regression + 2 SEC-03 grep audits. Each documented behavior gets its own regression signal. |
+| 03-03 | `test_invalid_credential_message_never_includes_credential_values` uses canary strings + asserts `exc.__cause__ is None` | Direct enforcement of D-02c — secret-leak-canary email + password substrings must not appear in str(exc); chained traceback must also be suppressed (proves `from None` is wired). |
+| 03-03 | Used `git commit -F /tmp/...` for all 3 tasks | Heredoc bash quoting fails on the apostrophe in plan-body text. Same precedent as Plan 02-03 Tasks 2+3. |
+| 03-03 | CLAUDE.md "Adding a Company" section lives OUTSIDE any `<!-- GSD:* -->` sentinel block | Per CONTEXT.md D-03 — survives future GSD regeneration cycles. Inserted between `<!-- GSD:workflow-end -->` and `<!-- GSD:profile-start -->`. |
+| 03-03 | Ship 27 net new tests vs plan's "≥21" target | Plan body counted the orchestrator-isolation test once but explicitly lists it in BOTH Task 1 (tests/test_orchestrator.py — unit-level synthetic-adapter mock) AND Task 3 (tests/test_credential_flow.py — integration-level 3-company scenario). Implementation ships BOTH (different scope; both add value). |
 
 ### Open Decisions
 
@@ -168,10 +178,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Session Continuity
 
-**Last session:** 2026-06-08T14:30:00Z
+**Last session:** 2026-06-08T15:54:28.069Z
 **Last action:** Completed Plan 03-02 (2 tasks committed: 7202dc0 Task 1 = src/adapters/playwright_fallback.py PlaywrightAdapter with XHR-intercept-first via page.expect_response + DOM-selector fallback via wait_for_selector + selectolax + playwright-stealth on by default (D-04) + 60s navigation timeout (D-05) + trace=off-in-prod with SCRAPER_DEBUG_TRACE escape hatch (D-06) + `pw:<host>:<id>` dedup keys with sha256(url)[:16] fallback (Pitfall 9) + tests/fixtures/anthropic_sample.{json,html} + tests/test_playwright_adapter.py 22 tests; ac6f40f Task 2 = registry imports PlaywrightAdapter + appends LAST in ADAPTERS per D-01c (now 7 adapters total) + normalizer gains _normalize_playwright + _read_playwright_description + 'playwright' key in _DISPATCH + 5 normalizer tests + 5 registry tests + updated test_new_adapter_can_be_added to insert before catch-all + rewrote 2 NoAdapterFound assertions as PlaywrightAdapter dispatch assertions); 348/348 cumulative tests passing (316 baseline + 22 adapter + 5 normalizer + 5 registry net = +32); ruff check src/ tests/ clean; SUMMARY.md written at `.planning/phases/03-playwright-fallback-credential-workflow/03-02-SUMMARY.md`. PlaywrightAdapter dispatch path proven: `CompanyConfig(name='anthropic', url='https://www.anthropic.com/careers')` → `PlaywrightAdapter`; specific-adapter precedence preserved (Greenhouse URL still → GreenhouseAdapter). ADP-09 + ADP-10 closed. ADP-14/15 open-closed re-proven a fifth time: zero edits to any of src/adapters/{greenhouse,lever,ashby,smartrecruiters,workday,apple}.py.
 **Stopped at:** Plan 03-02 execute-complete — PlaywrightAdapter wired in as catch-all LAST; ready for Plan 03-03 (credential workflow + CLAUDE.md Adding-a-Company section)
-**Resume file:** `.planning/phases/03-playwright-fallback-credential-workflow/03-02-SUMMARY.md` (Phase 3 Wave 2 done; next is Wave 3 = credential workflow)
+**Resume file:** None
 
 **Plan 01-01 Deliverables (Wave 1):**
 
@@ -217,7 +227,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 - W-1 (CONTEXT.md drift): Plan 01-01 Task 3 ships 2 single-line error-branch smoke tests beyond D-07's "happy-path only" guidance. **Outcome:** orchestrator prompt directed to keep them; both tests pass. Accepted.
 - W-2 (long-term gate semantics): Phase 1's sanity gate compares `still_listed_count` against monotonically-growing `prior_count`. Over many months `still_listed_count < 0.9 * prior_count` becomes structurally inevitable. Implementation matches STATE-06 as written. Fix can be deferred (most naturally to Phase 4 alongside OUT-09).
 
-**Next action:** Execute Plan 03-02 (PlaywrightAdapter — XHR-intercept first, DOM-fallback via selectolax, playwright-stealth on by default, 60s nav timeout, trace=off in prod, append as catch-all LAST in ADAPTERS). Anthropic careers (`anthropic.com/careers`) is the seed target per CONTEXT.md D-01. Phase 1 + Phase 2 remain awaiting verification.
+**Next action:** Run `/gsd-verify-phase 3` (or equivalent verification gate). All 3 phases (1, 2, 3) are now execute-complete and awaiting verification. After verification, Phase 4 (NORM-02 salary extraction + NORM-03 location normalization + OUT-09 Source Health footer) is the next planning target per ROADMAP.md.
 
 **Recovery context:** If session is interrupted, resume by reading `.planning/phases/01-walking-skeleton/01-CONTEXT.md` (Phase 1 locked decisions, supersedes ROADMAP success criteria where they conflict — e.g., INFRA-05 dropped; criterion #1 live-data verification deferred), then `.planning/phases/01-walking-skeleton/01-01-SUMMARY.md` (Wave 1) + `.planning/phases/01-walking-skeleton/01-02-SUMMARY.md` (Wave 2 — pure-core pipeline) + `.planning/phases/01-walking-skeleton/01-03-SUMMARY.md` (Wave 3 — orchestrator + e2e). Phase 1 deliverables: 10 source modules, 13 test files / 187 tests, 1 GitHub Actions workflow, 1 placeholder companies.txt, README with sentinels + full user-facing operational docs.
 
@@ -231,3 +241,4 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 *Plan 02-03 complete: 2026-06-08 — Apple adapter (ADP-08) + JD-scan (FILT-03) + D-02 is_early_career simplification + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough; 298 tests; Phase 2 execute-complete (all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03); ADP-14/15 open-closed re-proven across all 3 Phase 2 plans with 6 adapters.*
 *Plan 03-01 complete: 2026-06-08 — URL redirect resolver (src/url_resolver.py per CONTEXT.md D-01b) + CompanyConfig.resolved_url field + registry dispatch update + orchestrator wiring with defense-in-depth + workflow YAML Chromium install/cache step + .gitignore trace-output paths; 316 tests (+18 new: 8 url_resolver + 2 models + 3 registry + 2 orchestrator + 3 workflow_yaml); ADP-09 infrastructure prerequisite closed; ADP-14/15 open-closed re-proven a fourth time (zero edits to src/adapters/*); foundation for Plan 03-02 PlaywrightAdapter ready.*
 *Plan 03-02 complete: 2026-06-08 — PlaywrightAdapter (`src/adapters/playwright_fallback.py`, ADP-09 + ADP-10) — XHR-intercept-first via `page.expect_response` + DOM-selector fallback via `wait_for_selector` + selectolax + playwright-stealth on by default (D-04) + 60s navigation timeout (D-05) + trace=off in production with `SCRAPER_DEBUG_TRACE=1` escape hatch (D-06) + `pw:<host>:<id>` dedup keys with `sha256(url)[:16]` fallback (Pitfall 9); registry appends as catch-all LAST (D-01c — 7 adapters total); normalizer dispatches via `_normalize_playwright` (coalesces postingDate/postedAt/created_at/publishedAt date keys; canonicalizes URL; FILT-03 JD-scan via `_read_playwright_description`); 348 cumulative tests (+32 net: 22 adapter + 5 normalizer + 5 registry; 2 NoAdapterFound assertions rewritten as PlaywrightAdapter dispatch); ADP-14/15 open-closed re-proven a fifth time (zero edits to existing 6 src/adapters/*.py files); SEC-03 enforced (zero `traceback.format_exc` references in adapter); ADP-09 + ADP-10 closed.*
+*Plan 03-03 complete: 2026-06-08 — Phase 3 execute-complete. InvalidCredential typed exception in `src/adapters/base.py` (additive — pairs with MissingCredential; distinct typed error for "env present but login rejected" vs Phase 1's "env unset"); PlaywrightAdapter credential flow extending `src/adapters/playwright_fallback.py` with `_detect_login_form` (heuristic on `input[type='password']`) + `_company_to_secret_prefix` (SEC-02 naming: uppercase + hyphens/spaces -> underscores) + `_attempt_login` (reads `SCRAPER_<COMPANY_UPPERCASE>_<KIND>` env vars; raises MissingCredential on unset / InvalidCredential on form-persists-after-submit; `from None` suppresses chained traceback per D-02c so DOM-text leak via `__cause__` is impossible); single-line orchestrator catch-tuple extension in `src/main.py` (import + tuple include InvalidCredential); CLAUDE.md `## Adding a Company` 5-step workflow (Step 1 try-existing → Step 2 resolve-redirects with D-03a "commit resolved URL" → Step 3 Playwright catch-all → Step 4 new adapter → Step 5 credential branch with SEC-01 inline-prompt + SEC-02 `gh secret set` + SEC-04 `gh secret list` names-only audit + one-shot login test); README.md `## Credential Naming Convention (SEC-06)` with per-adapter audit table (6 ATS rows show `(none)` because all use public APIs; `**playwright**` row references `SCRAPER_<COMPANY>_EMAIL` + `_PASSWORD`); 375 cumulative tests (+27 net: 4 base/orch unit + 13 playwright credential + 10 credential_flow integration+docs); ADP-14/15 open-closed re-proven a sixth time (zero edits to the 6 ATS adapter files; base.py is APPEND-ONLY); SEC-03 structural enforcement via grep audit tests (no credential VALUE in raise/log/print; traceback.format_exc count == 0); all 6 Phase 3 REQ-IDs closed (ADP-09 + ADP-10 from Plan 03-02; SEC-01 + SEC-02 + SEC-04 + SEC-06 from Plan 03-03). Commits: 86397ed Task 1, 9e8a6dd Task 2, 87912d7 Task 3.*

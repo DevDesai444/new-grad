@@ -91,12 +91,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Credentials & Secrets (SEC)
 
-- [ ] **SEC-01**: When adding a company whose career site requires login to scrape useful results, Claude inline-prompts the user for email + password (and any other credential the site needs), receives them in the chat, and stores them via `gh secret set <NAME> --repo DevDesai444/new-grad` — the user does no manual repo-config work
-- [ ] **SEC-02**: Secret naming convention: `SCRAPER_<COMPANY>_EMAIL` and `SCRAPER_<COMPANY>_PASSWORD` (or similar typed names per credential kind); the secret name is referenced in the adapter via `os.environ[<NAME>]`
+- [x] **SEC-01**: When adding a company whose career site requires login to scrape useful results, Claude inline-prompts the user for email + password (and any other credential the site needs), receives them in the chat, and stores them via `gh secret set <NAME> --repo DevDesai444/new-grad` — the user does no manual repo-config work
+- [x] **SEC-02**: Secret naming convention: `SCRAPER_<COMPANY>_EMAIL` and `SCRAPER_<COMPANY>_PASSWORD` (or similar typed names per credential kind); the secret name is referenced in the adapter via `os.environ[<NAME>]`
 - [x] **SEC-03**: Credentials are NEVER written to: `companies.txt`, the repo, any committed file, any local file outside of `gh` CLI internals, the chat history (echoed back), or workflow logs
-- [ ] **SEC-04**: After storing a secret, Claude confirms by listing `gh secret list --repo DevDesai444/new-grad` (which shows names only, not values) — never by echoing the value
+- [x] **SEC-04**: After storing a secret, Claude confirms by listing `gh secret list --repo DevDesai444/new-grad` (which shows names only, not values) — never by echoing the value
 - [x] **SEC-05**: Adapter code that reads credentials raises a typed `MissingCredential` error if the env var is unset on a production run; this is logged and isolated per company (other companies in the same run still scan)
-- [ ] **SEC-06**: README documents which secret names are referenced by which adapter so the user can audit / rotate / delete them via `gh secret` later
+- [x] **SEC-06**: README documents which secret names are referenced by which adapter so the user can audit / rotate / delete them via `gh secret` later
 
 ### Run Lifecycle & Commit (RUN)
 
@@ -213,12 +213,12 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | OUT-07 | Phase 1 | Complete |
 | OUT-08 | Phase 1 | Complete |
 | OUT-09 | Phase 4 | Pending |
-| SEC-01 | Phase 3 | Pending |
-| SEC-02 | Phase 3 | Pending |
+| SEC-01 | Phase 3 | Complete |
+| SEC-02 | Phase 3 | Complete |
 | SEC-03 | Phase 1 | Complete |
-| SEC-04 | Phase 3 | Pending |
+| SEC-04 | Phase 3 | Complete |
 | SEC-05 | Phase 1 | Complete |
-| SEC-06 | Phase 3 | Pending |
+| SEC-06 | Phase 3 | Complete |
 | RUN-01 | Phase 1 | Complete |
 | RUN-02 | Phase 1 | Complete |
 | RUN-03 | Phase 1 | Complete |
