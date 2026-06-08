@@ -8,7 +8,7 @@
 ## Phases
 
 - [ ] **Phase 1: Walking Skeleton** — One Greenhouse company scraped, filtered, deduped, rendered, committed end-to-end on hourly cron
-- [ ] **Phase 2: ATS Breadth + JD-Scan** — Lever, Ashby, SmartRecruiters, Workday, Apple adapters land; experience-range extraction from descriptions
+- [x] **Phase 2: ATS Breadth + JD-Scan** — Lever, Ashby, SmartRecruiters, Workday, Apple adapters land; experience-range extraction from descriptions  *(execute-complete 2026-06-08; awaiting `/gsd-verify-phase 2`)*
 - [ ] **Phase 3: Playwright Fallback + Credential Workflow** — Headless-browser adapter covers non-ATS SPAs; `gh secret set` workflow for sites needing login
 - [ ] **Phase 4: Extraction Polish + Health Observability** — Salary + location normalization; per-source health footer renders status of every tracked company
 
@@ -56,7 +56,7 @@
 **Plans**: 3 plans
 - [x] 02-01-PLAN.md — Lever, Ashby, SmartRecruiters adapters + normalizer dispatch + registry append + 27 D-03 tests (Wave 1; ADP-04/05/06)  *(complete 2026-06-08; 3 commits bc05f08/3a9308f/f77106c; 214 cumulative tests; ADP-14/15 open-closed re-proven)*
 - [x] 02-02-PLAN.md — Workday adapter (D-01 URL regex + D-04 pagination + 3-form postedOn parsing) + normalizer + registry + 35 tests (Wave 2; ADP-07)  *(complete 2026-06-08; 2 commits ff6172a/9d22e62; 249 cumulative tests; ADP-14/15 open-closed re-proven with 5 adapters)*
-- [ ] 02-03-PLAN.md — Apple adapter + JD-scan extension (extract_experience_range wires all 6 normalizers; is_early_career simplified per D-02) + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough (Wave 3; ADP-08, FILT-03)
+- [x] 02-03-PLAN.md — Apple adapter + JD-scan extension (extract_experience_range wires all 6 normalizers; is_early_career simplified per D-02) + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough (Wave 3; ADP-08, FILT-03)  *(complete 2026-06-08; 3 commits 589f1da/c44f910/efba667; 298 cumulative tests; Phase 2 execute-complete — all 6 phase REQ-IDs closed; ADP-14/15 open-closed re-proven across all 3 Phase 2 plans with 6 adapters)*
 
 ### Phase 3: Playwright Fallback + Credential Workflow
 **Goal**: User's `companies.txt` can include a JS-heavy SPA (e.g., Anthropic, custom careers portal) and the hourly run scrapes it via headless Chromium; if a site requires login, Claude CLI handles the entire credential-storage flow via `gh secret set` with zero manual repo-config work from the user.
@@ -92,7 +92,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 3/3 | Execute-complete (verification pending) | 2026-06-08 |
-| 2. ATS Breadth + JD-Scan | 2/3 | Executing — Plans 02-01 (Lever/Ashby/SR) + 02-02 (Workday) complete; Plan 02-03 (Apple + JD-scan) next | - |
+| 2. ATS Breadth + JD-Scan | 3/3 | Execute-complete (verification pending) — all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03 | 2026-06-08 |
 | 3. Playwright Fallback + Credential Workflow | 0/? | Not started | - |
 | 4. Extraction Polish + Health Observability | 0/? | Not started | - |
 

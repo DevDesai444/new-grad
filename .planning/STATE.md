@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plan 02-02 execute-complete; ready for Plan 02-03 (Apple + JD-scan + retroactive Greenhouse D-03)
-last_updated: "2026-06-08T00:35:00.000Z"
+stopped_at: Plan 02-03 execute-complete — Phase 2 execute-complete (all 6 REQ-IDs closed); ready for /gsd-verify-phase 2
+last_updated: "2026-06-08T08:25:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
-  percent: 71
+  completed_plans: 6
+  percent: 86
 ---
 
 # STATE: new-grad
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 02 (ATS Breadth + JD-Scan) — EXECUTING
-Plan: 3 of 3 (Plans 02-01 and 02-02 COMPLETE; next is Plan 02-03 Apple + JD-scan + retroactive Greenhouse D-03)
+Phase: 02 (ATS Breadth + JD-Scan) — EXECUTE-COMPLETE
+Plan: 3 of 3 COMPLETE (all 3 Phase 2 plans landed)
 **Milestone:** v1
 **Phase:** 2 — ATS Breadth + JD-Scan
-**Plan:** 02-02 complete — Workday adapter (commits ff6172a Task 1, 9d22e62 Task 2); 249 cumulative tests passing; ADP-07 closed
-**Status:** Executing Phase 02
-**Progress:** [███████░░░] 71% (5/7 plans complete: 3 in Phase 1, 2 in Phase 2)
+**Plan:** 02-03 complete — Apple adapter (ADP-08) + JD-scan (FILT-03) + D-02 simplification + retroactive Greenhouse D-03 (commits 589f1da Task 1, c44f910 Task 2, efba667 Task 3); 298 cumulative tests passing; ADP-08 + FILT-03 closed. Phase 2 execute-complete — all 6 phase REQ-IDs (ADP-04..08 + FILT-03) closed.
+**Status:** Phase 02 execute-complete; awaiting `/gsd-verify-phase 2`
+**Progress:** [█████████░] 86% (6/7 plans complete: 3 in Phase 1, 3 in Phase 2)
 
 ### Phase 1 Goal
 
@@ -47,10 +47,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Performance Metrics
 
-- **Phases complete:** 0/4 (Phase 1 execute-complete, awaiting verification; Phase 2 Plans 1+2 of 3 complete)
+- **Phases complete:** 0/4 (Phase 1 + Phase 2 both execute-complete, awaiting verification)
 - **Requirements mapped:** 71/71 (100%)
-- **Requirements validated:** 60/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02)
-- **Plans complete:** 5/7 (3/3 in Phase 01 + 2/3 in Phase 02 — Plan 02-02: ~25min, 2 tasks, 3 created + 2 modified files, 35 new tests / 249 cumulative)
+- **Requirements validated:** 62/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03)
+- **Plans complete:** 6/7 (3/3 in Phase 01 + 3/3 in Phase 02 — Plan 02-03: ~30min, 3 tasks, 3 created + 7 modified files, 49 new tests / 298 cumulative)
 - **Existential risks addressed:** 5/5 in Phase 01 (unchanged)
 
 ### Per-Plan Metrics
@@ -62,6 +62,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 01    | 03   | ~8min    | 3     | 7 (6 new + 1 mod) |
 | 02    | 01   | ~25min   | 3     | 11 (9 new + 2 mod) |
 | 02    | 02   | ~25min   | 2     | 5 (3 new + 2 mod)  |
+| 02    | 03   | ~30min   | 3     | 10 (3 new + 7 mod) |
 
 ## Accumulated Context
 
@@ -112,6 +113,15 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 02-02 | `_parse_workday_posted` excludes `bool` from the epoch-ms branch via `not isinstance(value, bool)` | Python `bool` is a subclass of `int` (True == 1); a JSON `true` value should not silently become datetime(1970-01-01, 1ms). |
 | 02-02 | `time.sleep` is monkeypatched to noop in slow tests via `src.adapters.workday.time.sleep -> lambda s: None` | Keeps `test_fetch_cold_start_cap_25_pages` under 100ms instead of ~25s; production keeps real sleep for rate-limit hedging. |
 | 02-02 | Ship 35 tests vs plan's "~14" budget | Granular split per postedOn form / per malformed-URL case gives clearer regression signal; no scope creep, all defend documented behavior. |
+| 02-03 | Apple `matches()` accepts ANY jobs.apple.com subpath; no path validation | Per CONTEXT.md D-01a Apple is single-org; user can paste search / details / browse URL — adapter ignores path and POSTs the broad endpoint. |
+| 02-03 | Apple dedup-key regex test uses `^apple:[^:]+$` (one colon, not two) | Locks D-01a invariant into the suite — `apple:<id>` not `apple:apple:<id>`; mirrors the SR `name="smartrecruiters"` vs `"sr:"` precedent test from Plan 02-01. |
+| 02-03 | `is_early_career` body is one line (`return _passes_title_gate(...)`); zero `experience_min` references | D-02 simplification taken at the source — docstring documents the change but no live code touches `experience_min`. AC literal-grep `awk '/^def is_early_career/,/^def /' src/filter.py \| grep -c experience_min` returns 0. |
+| 02-03 | Phase 1 `test_experience_min_above_ceiling_overrides_title_pass` REWRITTEN as `test_is_early_career_ignores_experience_min_per_d02`, not deleted | Same test slot, inverted assertion, explicit docstring pointing to CONTEXT.md D-02 — preserves Phase 1's grep-able test-id while encoding the new D-02 invariant. |
+| 02-03 | Workday `__description` hook wired even though CXS /jobs doesn't return per-posting description today | Future per-posting detail fetch starts populating Experience automatically with zero normalizer changes — the JD-scan layer is open-closed for future Workday enhancements. |
+| 02-03 | `commit -m` HEREDOC switched to `commit -F /tmp/<file>.txt` for Tasks 2 + 3 after a bash quoting failure on apostrophes | Mechanical workaround — no content lost; commits applied cleanly. Documented for future Phase 3/4 commit-message authors. |
+| 02-03 | REQUIREMENTS.md FILT-04 line keeps `[x]` checkbox + adds `~~**FILT-04**~~` + footnote | Same convention as Phase 1 INFRA-05 strikethrough — the Phase 1 implementation literally satisfied FILT-04; the softening is a SEMANTIC change documented via strikethrough + footnote, not an unship. |
+| 02-03 | Apple sort-monotonicity violation logs WARNING + suppresses early-term (degrade to cap-only) | Mirrors Workday from Plan 02-02 — same tradeoff: completeness over speed when source sort ordering breaks. |
+| 02-03 | Ship 49 tests vs plan's "≥22" budget | Granular split per regex form + 2 Workday cases (absent vs stashed __description) + 4 retroactive Greenhouse tests + 16 Apple tests; defends explicit behavior per AC. |
 
 ### Open Decisions
 
@@ -138,10 +148,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Session Continuity
 
-**Last session:** 2026-06-08T00:35:00Z
-**Last action:** Completed Plan 02-02 Workday adapter (2 tasks committed: ff6172a Task 1 = URL parser + single-page fetch + postedOn 3-form resolver + 25 D-03 tests; 9d22e62 Task 2 = pagination + sort-monotonicity + normalizer dispatch + registry append + 10 more tests); 249/249 cumulative tests passing (214 baseline + 35 new); `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/02-ats-breadth-jd-scan/02-02-SUMMARY.md`. ADP-07 complete. ADP-14/15 open-closed contract re-proven with 5 adapters: 0 edits to main.py / models.py / state_*.py / renderer.py / filter.py / config_loader.py / any sibling adapter file. Registry now holds 5 adapters (greenhouse, lever, ashby, smartrecruiters, workday); normalizer dispatch covers all 5 sources.
-**Stopped at:** Plan 02-02 execute-complete; ready for Plan 02-03 (Apple adapter + JD-scan extension (FILT-03) + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough)
-**Resume file:** `.planning/phases/02-ats-breadth-jd-scan/02-03-PLAN.md`
+**Last session:** 2026-06-08T08:25:00Z
+**Last action:** Completed Plan 02-03 (3 tasks committed: 589f1da Task 1 = Apple adapter + D-04 pagination + 16 tests; c44f910 Task 2 = JD-scan (FILT-03) + wire all 6 normalizers + D-02 is_early_career simplification + REQUIREMENTS.md FILT-04 strikethrough; efba667 Task 3 = retroactive Greenhouse D-03 tests closing Phase 1 W-1/D-07 debt); 298/298 cumulative tests passing (249 baseline + 49 new); `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/02-ats-breadth-jd-scan/02-03-SUMMARY.md`. ADP-08 + FILT-03 complete — Phase 2 execute-complete, all 6 phase REQ-IDs closed. ADP-14/15 open-closed re-proven across all 3 Phase 2 plans: 0 edits to main.py / models.py / state_*.py / renderer.py / config_loader.py. Registry now holds 6 adapters (greenhouse, lever, ashby, smartrecruiters, workday, apple); normalizer dispatch covers all 6 sources; every per-adapter normalizer wires extract_experience_range; is_early_career is title-gate-only per D-02. Greenhouse adapter has parity D-03 6-test coverage with the 5 newer adapters; D-07 deferred-test debt formally closed.
+**Stopped at:** Plan 02-03 execute-complete — Phase 2 execute-complete; ready for `/gsd-verify-phase 2`
+**Resume file:** `.planning/phases/02-ats-breadth-jd-scan/02-03-SUMMARY.md` (Phase 2 done; next milestone is verification)
 
 **Plan 01-01 Deliverables (Wave 1):**
 
@@ -198,3 +208,4 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 *Plan 01-03 complete: 2026-06-08 — Phase 1 execute-complete.*
 *Plan 02-01 complete: 2026-06-08 — Lever + Ashby + SmartRecruiters adapters (ADP-04/05/06); 214 tests; ADP-14/15 open-closed re-proven.*
 *Plan 02-02 complete: 2026-06-08 — Workday adapter (ADP-07); 249 tests; ADP-14/15 open-closed re-proven with 5 adapters; D-01 URL auto-parse + D-04 pagination with 25-page cap + sort-monotonicity + 3-form postedOn resolver + realistic User-Agent (Pitfall 5).*
+*Plan 02-03 complete: 2026-06-08 — Apple adapter (ADP-08) + JD-scan (FILT-03) + D-02 is_early_career simplification + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough; 298 tests; Phase 2 execute-complete (all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03); ADP-14/15 open-closed re-proven across all 3 Phase 2 plans with 6 adapters.*
