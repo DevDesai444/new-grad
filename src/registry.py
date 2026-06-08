@@ -9,6 +9,7 @@ code changes required (open/closed principle).
 """
 from __future__ import annotations
 
+from src.adapters.apple import AppleAdapter
 from src.adapters.ashby import AshbyAdapter
 from src.adapters.base import Adapter
 from src.adapters.greenhouse import GreenhouseAdapter
@@ -38,6 +39,7 @@ ADAPTERS: list[type[Adapter]] = [
     AshbyAdapter,
     SmartRecruitersAdapter,
     WorkdayAdapter,
+    AppleAdapter,
 ]
 
 

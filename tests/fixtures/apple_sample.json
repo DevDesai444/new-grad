@@ -1,0 +1,46 @@
+{
+  "searchResults": [
+    {
+      "id": "200593841",
+      "positionId": "200593841",
+      "postingTitle": "Software Engineer, New Grad",
+      "transformedPostingTitle": "software-engineer-new-grad",
+      "postingDate": "2026-06-05T10:00:00Z",
+      "locations": [{"name": "Cupertino, CA"}, {"name": "Austin, TX"}],
+      "jobSummary": "Join Apple as a new grad SWE. Recent graduate or equivalent experience preferred."
+    },
+    {
+      "id": "200593842",
+      "positionId": "200593842",
+      "postingTitle": "Senior Staff Engineer, Privacy",
+      "transformedPostingTitle": "senior-staff-engineer-privacy",
+      "postingDate": "2026-06-04T10:00:00Z",
+      "locations": [{"name": "Cupertino, CA"}],
+      "jobSummary": "10+ years of experience required. Privacy-engineering background."
+    },
+    {
+      "id": "200593843",
+      "positionId": "200593843",
+      "postingTitle": "Associate Software Engineer",
+      "transformedPostingTitle": "associate-software-engineer",
+      "postingDate": "2026-06-03T10:00:00Z",
+      "locations": [{"name": "Seattle, WA"}],
+      "jobSummary": "0-3 years of experience. Entry-level role for new graduates."
+    },
+    {
+      "id": "200593844",
+      "positionId": "200593844",
+      "postingTitle": "Software Engineer, New Grad — but 7+ years required",
+      "transformedPostingTitle": "swe-new-grad-7y",
+      "postingDate": "2026-06-02T10:00:00Z",
+      "locations": [{"name": "Cupertino, CA"}],
+      "jobSummary": "Title says new grad but the body requires 7+ years experience. Per D-02 this row stays in the table; the Experience column displays 7y+."
+    },
+    {
+      "postingTitle": "Malformed entry missing positionId"
+    }
+  ],
+  "total": 4,
+  "page": 0,
+  "pageSize": 20
+}

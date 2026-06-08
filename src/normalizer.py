@@ -14,6 +14,7 @@ Requirements covered:
 """
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
@@ -301,12 +302,97 @@ def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
     )
 
 
+def _slugify(text: str) -> str:
+    """Lowercase + replace runs of non-alphanumerics with single hyphen.
+
+    Defensive helper for constructing Apple posting URLs when the response
+    omits `transformedPostingTitle`. Caps length at 80 chars.
+    """
+    s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return s[:80]
+
+
+def _normalize_apple(rp: RawPosting, run_started_at: datetime) -> Posting:
+    """Apple-specific normalization (ADP-08).
+
+    Per CONTEXT.md D-01a + <apple_adapter_specifications> in 02-03-PLAN.md:
+      title:        coalesce(raw["postingTitle"], raw["title"])
+      location:     ", ".join(loc["name"] for loc in raw["locations"])
+      posting_url:  canonicalize_url(
+                       f"https://jobs.apple.com/en-us/details/{positionId}/{slug}")
+                    where slug = raw["transformedPostingTitle"] or slugify(title)
+      posted_date:  _parse_iso_to_utc(coalesce(raw["postingDate"],
+                                               raw["postDateInGMT"]))
+
+    Dedup key is `apple:<positionId>` (NO per-company prefix per D-01a) —
+    already stashed in raw["__dedup_key"] by the adapter.
+
+    Plan 02-03 Task 2 wires extract_experience_range into all 6 helpers; this
+    Task 1 commit leaves experience_min/max=None (Task 2's diff is purely
+    additive — replaces the None literals with extract_experience_range call).
+    """
+    raw = rp.raw
+    dedup_key = raw["__dedup_key"]
+    # Coalesce title — Apple response sometimes uses `postingTitle`, sometimes
+    # `title`. First non-empty wins.
+    title = (raw.get("postingTitle") or raw.get("title") or "").strip()
+
+    # Compose location from list of {"name": "..."} entries.
+    locations = raw.get("locations") or []
+    loc_names: list[str] = []
+    if isinstance(locations, list):
+        for loc in locations:
+            if isinstance(loc, dict):
+                nm = (loc.get("name") or "").strip()
+                if nm:
+                    loc_names.append(nm)
+    location = ", ".join(loc_names)
+
+    # Construct posting URL from positionId + slug (Apple doesn't return a
+    # fully-formed URL — we build it).
+    position_id = raw.get("__position_id", "")
+    slug = (
+        raw.get("transformedPostingTitle")
+        or _slugify(title)
+        or "details"
+    )
+    posting_url_raw = (
+        f"https://jobs.apple.com/en-us/details/{position_id}/{slug}"
+    )
+    posting_url = canonicalize_url(posting_url_raw)
+
+    # Coalesce postingDate / postDateInGMT — both ISO-8601 strings.
+    posted_raw = raw.get("postingDate") or raw.get("postDateInGMT")
+    posted_date = _parse_iso_to_utc(posted_raw)
+
+    company = rp.source_company
+    if company.islower():
+        company = company.capitalize()
+
+    return Posting(
+        dedup_key=dedup_key,
+        company=company,
+        title=title,
+        location=location,
+        salary=None,
+        experience_min=None,
+        experience_max=None,
+        posting_url=posting_url,
+        posted_date=posted_date,
+        first_seen=run_started_at,
+        last_seen=run_started_at,
+        still_listed=True,
+        source_adapter=rp.source_adapter,
+    )
+
+
 _DISPATCH = {
     "greenhouse": _normalize_greenhouse,
     "lever": _normalize_lever,
     "ashby": _normalize_ashby,
     "smartrecruiters": _normalize_smartrecruiters,
     "workday": _normalize_workday,
+    "apple": _normalize_apple,
 }
 
 
