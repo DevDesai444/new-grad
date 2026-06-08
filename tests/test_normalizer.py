@@ -532,3 +532,406 @@ def test_normalize_playwright_canonicalizes_url():
     assert "utm_source" not in p.posting_url
     assert "section" not in p.posting_url
     assert "keep=yes" in p.posting_url
+
+
+# --- Phase 4 Plan 04-01 — salary verbatim (D-01) per-adapter access paths ----
+# Each adapter's normalizer helper populates Posting.salary from a source-
+# specific JSON path. No parsing, no currency conversion. Empty / missing
+# source field → salary == "" (the renderer coalesces "" to "—" per D-01a).
+
+
+class TestSalaryVerbatimPerAdapter:
+    """D-01 — every per-adapter helper populates Posting.salary verbatim."""
+
+    def test_greenhouse_helper_populates_salary_from_metadata_label(self):
+        """Greenhouse salary lives in raw['metadata'] list under name='Salary*'."""
+        rp = RawPosting(
+            source_company="stripe",
+            source_adapter="greenhouse",
+            raw={
+                "id": 1,
+                "title": "New Grad SWE",
+                "location": {"name": "SF"},
+                "absolute_url": "https://example.com",
+                "updated_at": "2026-06-01T00:00:00Z",
+                "metadata": [
+                    {"name": "Department", "value": "Eng"},
+                    {"name": "Salary Range", "value": "$120k–$160k"},
+                ],
+                "__dedup_key": "gh:stripe:1",
+                "__board_token": "stripe",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == "$120k–$160k"
+
+    def test_greenhouse_helper_salary_empty_when_no_metadata(self):
+        """No metadata field → salary == ''."""
+        rp = RawPosting(
+            source_company="stripe",
+            source_adapter="greenhouse",
+            raw={
+                "id": 2,
+                "title": "T",
+                "location": {"name": "SF"},
+                "absolute_url": "https://example.com",
+                "updated_at": "2026-06-01T00:00:00Z",
+                "__dedup_key": "gh:stripe:2",
+                "__board_token": "stripe",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == ""
+
+    def test_greenhouse_helper_salary_empty_when_metadata_has_no_salary_entry(self):
+        """metadata exists but contains no salary-named entry → ''."""
+        rp = RawPosting(
+            source_company="stripe",
+            source_adapter="greenhouse",
+            raw={
+                "id": 3,
+                "title": "T",
+                "location": {"name": "SF"},
+                "absolute_url": "https://example.com",
+                "updated_at": "2026-06-01T00:00:00Z",
+                "metadata": [
+                    {"name": "Department", "value": "Eng"},
+                    {"name": "Office", "value": "SF"},
+                ],
+                "__dedup_key": "gh:stripe:3",
+                "__board_token": "stripe",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == ""
+
+    def test_lever_helper_populates_salary_from_salary_range_text(self):
+        """Lever raw['salaryRange']['text'] is preferred."""
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="lever",
+            raw={
+                "id": "abc",
+                "text": "New Grad SWE",
+                "categories": {"location": "SF"},
+                "hostedUrl": "https://jobs.lever.co/notion/abc",
+                "createdAt": 1717200000000,
+                "salaryRange": {"text": "$130,000 - $170,000 USD"},
+                "__dedup_key": "lever:notion:abc",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == "$130,000 - $170,000 USD"
+
+    def test_lever_helper_falls_back_to_flat_salary(self):
+        """Lever raw['salary'] is fallback when salaryRange missing."""
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="lever",
+            raw={
+                "id": "abc",
+                "text": "New Grad SWE",
+                "categories": {"location": "SF"},
+                "hostedUrl": "https://jobs.lever.co/notion/abc",
+                "createdAt": 1717200000000,
+                "salary": "Competitive",
+                "__dedup_key": "lever:notion:abc",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == "Competitive"
+
+    def test_lever_helper_salary_empty_when_no_source_field(self):
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="lever",
+            raw={
+                "id": "abc",
+                "text": "T",
+                "categories": {"location": "SF"},
+                "hostedUrl": "https://jobs.lever.co/notion/abc",
+                "createdAt": 1717200000000,
+                "__dedup_key": "lever:notion:abc",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == ""
+
+    def test_ashby_helper_populates_salary_from_compensation_tier_summary(self):
+        """Ashby raw['compensation']['compensationTierSummary'] (per includeCompensation=true)."""
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="ashby",
+            raw={
+                "id": "ashby-id",
+                "title": "SWE",
+                "locationName": "SF",
+                "jobUrl": "https://jobs.ashbyhq.com/notion/ashby-id",
+                "publishedAt": "2026-06-01T00:00:00Z",
+                "compensation": {
+                    "compensationTierSummary": "$140K - $180K • Equity",
+                },
+                "__dedup_key": "ashby:notion:ashby-id",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == "$140K - $180K • Equity"
+
+    def test_ashby_helper_salary_empty_when_compensation_none(self):
+        """Defensive — compensation: None → salary == ''."""
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="ashby",
+            raw={
+                "id": "ashby-id",
+                "title": "SWE",
+                "locationName": "SF",
+                "jobUrl": "https://jobs.ashbyhq.com/notion/ashby-id",
+                "publishedAt": "2026-06-01T00:00:00Z",
+                "compensation": None,
+                "__dedup_key": "ashby:notion:ashby-id",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == ""
+
+    def test_smartrecruiters_helper_salary_always_empty(self):
+        """SR /postings endpoint does not expose salary — always ''."""
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="smartrecruiters",
+            raw={
+                "id": "sr-id",
+                "name": "SWE",
+                "location": {"city": "NYC", "country": "US"},
+                "ref": "https://api.smartrecruiters.com/v1/companies/notion/postings/sr-id",
+                "releasedDate": "2026-06-01T00:00:00.000Z",
+                "__dedup_key": "sr:notion:sr-id",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == ""
+
+    def test_workday_helper_salary_always_empty(self):
+        """Workday CXS /jobs endpoint does not expose salary — always ''."""
+        rp = RawPosting(
+            source_company="nvidia",
+            source_adapter="workday",
+            raw={
+                "title": "SWE",
+                "locationsText": "US, CA",
+                "__posting_url": "https://nvidia.wd5.myworkdayjobs.com/job/R-1",
+                "__posted_date_utc": None,
+                "__dedup_key": "wd:nvidia:R-1",
+                "__tenant": "nvidia",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == ""
+
+    def test_apple_helper_populates_salary_from_posting_pay_range(self):
+        """Apple raw['postingPay']['payRange']['text'] is preferred."""
+        rp = RawPosting(
+            source_company="Apple",
+            source_adapter="apple",
+            raw={
+                "id": "200500000",
+                "positionId": "200500000",
+                "postingTitle": "SWE",
+                "transformedPostingTitle": "swe",
+                "postingDate": "2026-06-02T10:00:00Z",
+                "locations": [{"name": "Cupertino, CA"}],
+                "postingPay": {"payRange": {"text": "$135,000 - $200,000"}},
+                "__dedup_key": "apple:200500000",
+                "__position_id": "200500000",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == "$135,000 - $200,000"
+
+    def test_apple_helper_salary_empty_when_no_known_fields(self):
+        rp = RawPosting(
+            source_company="Apple",
+            source_adapter="apple",
+            raw={
+                "id": "200500001",
+                "positionId": "200500001",
+                "postingTitle": "SWE",
+                "transformedPostingTitle": "swe",
+                "postingDate": "2026-06-02T10:00:00Z",
+                "locations": [{"name": "Cupertino, CA"}],
+                "__dedup_key": "apple:200500001",
+                "__position_id": "200500001",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == ""
+
+    def test_playwright_helper_populates_salary_from_raw_salary(self):
+        """Playwright raw['salary'] when XHR/DOM extracted it."""
+        rp = RawPosting(
+            source_company="anthropic",
+            source_adapter="playwright",
+            raw={
+                "id": "j-100",
+                "title": "SWE",
+                "location": "SF",
+                "posting_url": "https://anthropic.com/careers/j-100",
+                "postingDate": "2026-06-01T12:00:00Z",
+                "description": "",
+                "salary": "$150,000 base + equity",
+                "__dedup_key": "pw:anthropic.com:j-100",
+                "__host": "anthropic.com",
+                "__extraction_path": "xhr",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == "$150,000 base + equity"
+
+    def test_playwright_helper_salary_empty_when_no_field(self):
+        rp = RawPosting(
+            source_company="anthropic",
+            source_adapter="playwright",
+            raw={
+                "title": "SWE",
+                "location": "SF",
+                "posting_url": "https://anthropic.com/careers/j-100",
+                "description": "",
+                "__dedup_key": "pw:anthropic.com:j-100",
+                "__host": "anthropic.com",
+                "__extraction_path": "dom",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.salary == ""
+
+
+# --- Phase 4 Plan 04-01 — location routed through normalize_location (D-02) ---
+
+
+class TestLocationNormalizationPerAdapter:
+    """D-02 — every per-adapter helper routes location through normalize_location."""
+
+    def test_greenhouse_routes_location_through_normalize(self):
+        rp = RawPosting(
+            source_company="stripe",
+            source_adapter="greenhouse",
+            raw={
+                "id": 10,
+                "title": "T",
+                "location": {"name": "Remote, US"},
+                "absolute_url": "https://example.com",
+                "updated_at": "2026-06-01T00:00:00Z",
+                "__dedup_key": "gh:stripe:10",
+                "__board_token": "stripe",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.location == "Remote (US)"
+
+    def test_lever_routes_location_through_normalize(self):
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="lever",
+            raw={
+                "id": "abc",
+                "text": "T",
+                "categories": {"location": "Remote, US"},
+                "hostedUrl": "https://jobs.lever.co/notion/abc",
+                "createdAt": 1717200000000,
+                "__dedup_key": "lever:notion:abc",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.location == "Remote (US)"
+
+    def test_ashby_routes_location_through_normalize(self):
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="ashby",
+            raw={
+                "id": "x",
+                "title": "T",
+                "locationName": "Remote (UK)",
+                "jobUrl": "https://jobs.ashbyhq.com/notion/x",
+                "publishedAt": "2026-06-01T00:00:00Z",
+                "__dedup_key": "ashby:notion:x",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.location == "Remote (non-US)"
+
+    def test_smartrecruiters_routes_location_through_normalize(self):
+        """SR composes 'city, country' — composed string is normalized.
+
+        Note: SR's typical 'city, country' shape does not match the Remote-form
+        patterns, so this test verifies passthrough of a non-Remote value via
+        normalize_location. The bare 'Remote' case is exercised by other adapters."""
+        rp = RawPosting(
+            source_company="notion",
+            source_adapter="smartrecruiters",
+            raw={
+                "id": "x",
+                "name": "T",
+                "location": {"city": "San Francisco", "country": "US"},
+                "ref": "https://api.smartrecruiters.com/v1/companies/notion/postings/x",
+                "releasedDate": "2026-06-01T00:00:00.000Z",
+                "__dedup_key": "sr:notion:x",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        # Composed "San Francisco, US" is not a Remote-form variant — passthrough.
+        assert p.location == "San Francisco, US"
+
+    def test_workday_routes_location_through_normalize(self):
+        rp = RawPosting(
+            source_company="nvidia",
+            source_adapter="workday",
+            raw={
+                "title": "T",
+                "locationsText": "Remote (USA)",
+                "__posting_url": "https://nvidia.wd5.myworkdayjobs.com/job/R-1",
+                "__posted_date_utc": None,
+                "__dedup_key": "wd:nvidia:R-1",
+                "__tenant": "nvidia",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.location == "Remote (US)"
+
+    def test_apple_composes_then_normalizes_location(self):
+        """Apple location is composed from list of dicts before normalize."""
+        rp = RawPosting(
+            source_company="Apple",
+            source_adapter="apple",
+            raw={
+                "id": "200500010",
+                "positionId": "200500010",
+                "postingTitle": "T",
+                "transformedPostingTitle": "t",
+                "postingDate": "2026-06-02T10:00:00Z",
+                "locations": [{"name": "Remote"}],  # single-element composed → "Remote"
+                "__dedup_key": "apple:200500010",
+                "__position_id": "200500010",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        # Composed "Remote" → bare-Remote rule → "Remote (US)".
+        assert p.location == "Remote (US)"
+
+    def test_playwright_routes_location_through_normalize(self):
+        rp = RawPosting(
+            source_company="anthropic",
+            source_adapter="playwright",
+            raw={
+                "title": "T",
+                "location": "Remote, US",
+                "posting_url": "https://anthropic.com/careers/x",
+                "description": "",
+                "__dedup_key": "pw:anthropic.com:x",
+                "__host": "anthropic.com",
+                "__extraction_path": "xhr",
+            },
+        )
+        p = normalize(rp, _RUN_STARTED_AT)
+        assert p.location == "Remote (US)"
