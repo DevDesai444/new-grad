@@ -26,13 +26,28 @@ import orjson
 logger = logging.getLogger(__name__)
 
 # STATE-08
-SCHEMA_VERSION: int = 1
+# Phase 4 Plan 04-03 D-04 — bumped 1 → 2 to add the source_health block.
+# load_state auto-migrates v1 in memory; save_state_atomic writes v2 only.
+SCHEMA_VERSION: int = 2
 
 EMPTY_STATE: dict = {
     "schema_version": SCHEMA_VERSION,
     "last_run_utc": None,
     "postings": {},
+    # Plan 04-03 D-04 — per-company adapter outcome tracking; NOT rendered
+    # in README per CONTEXT.md D-04c (data persisted for diagnostic use only).
+    "source_health": {},
 }
+
+
+def _fresh_empty_state() -> dict:
+    """Return a fresh, independent EMPTY_STATE copy (callers may mutate)."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "last_run_utc": None,
+        "postings": {},
+        "source_health": {},
+    }
 
 # STATE-06 — CONTEXT.md D-06: gate always engages; cold-start (prior=0) trivially
 # passes because new < 0.9 * 0 = 0 is False.
@@ -90,6 +105,38 @@ def _parse_state_bytes(data: bytes, source: Path) -> dict | None:
     if "postings" not in state or not isinstance(state["postings"], dict):
         logger.warning("state_store: %s missing 'postings' dict", source)
         return None
+    # Phase 4 Plan 04-03 D-04a — auto-migrate older schemas in memory.
+    # Currently only v1 → v2 (add empty source_health block). The migration
+    # is in-memory only; the next save_state_atomic call writes v2.
+    if sv < SCHEMA_VERSION:
+        if sv == 1:
+            state.setdefault("source_health", {})
+            state["schema_version"] = SCHEMA_VERSION
+            logger.info(
+                "state_store: auto-migrated %s from schema_version=1 to %d "
+                "(added empty source_health block)",
+                source,
+                SCHEMA_VERSION,
+            )
+        else:
+            # Defensive: any older version we haven't written explicit
+            # migration code for. Treat as corrupt to force investigation.
+            logger.warning(
+                "state_store: %s has schema_version=%d which has no migration "
+                "path; treating as corrupt",
+                source,
+                sv,
+            )
+            return None
+    # Plan 04-03 D-04 — source_health is mandatory for v2 but tolerate
+    # missing / wrong-type for forward compatibility and partial-write recovery.
+    # Defaulting to {} preserves Pitfall 1's "fail soft on corrupted state".
+    if "source_health" not in state or not isinstance(state.get("source_health"), dict):
+        logger.warning(
+            "state_store: %s missing/invalid source_health; defaulting to {}",
+            source,
+        )
+        state["source_health"] = {}
     return state
 
 
@@ -102,8 +149,8 @@ def load_state(path: Path = Path("seen.json")) -> dict:
     - UnknownSchemaVersion on either file -> raise (forward-incompat).
     """
     if not path.exists():
-        # Deep-copy: prevent callers from mutating the module-level EMPTY_STATE.
-        return {"schema_version": SCHEMA_VERSION, "last_run_utc": None, "postings": {}}
+        # Independent copy: prevent callers from mutating the module-level EMPTY_STATE.
+        return _fresh_empty_state()
 
     state = _parse_state_bytes(path.read_bytes(), path)
     if state is not None:
@@ -124,7 +171,7 @@ def load_state(path: Path = Path("seen.json")) -> dict:
         path,
         bak,
     )
-    return {"schema_version": SCHEMA_VERSION, "last_run_utc": None, "postings": {}}
+    return _fresh_empty_state()
 
 
 def save_state_atomic(state: dict, path: Path = Path("seen.json")) -> None:
@@ -135,6 +182,10 @@ def save_state_atomic(state: dict, path: Path = Path("seen.json")) -> None:
     3. Serialize via orjson OPT_SORT_KEYS (STATE-07) for deterministic diffs.
     4. Write to .tmp + fsync.
     5. os.replace(.tmp, path) — POSIX-atomic (STATE-02).
+
+    Phase 4 Plan 04-03 D-04: the serialized v2 payload includes the
+    `source_health` block alongside `postings`. orjson handles dict-of-dict
+    generically — no special serialization needed.
     """
     if state.get("schema_version") != SCHEMA_VERSION:
         raise ValueError(
