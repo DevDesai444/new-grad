@@ -71,7 +71,10 @@
   2. The Playwright Chromium cache (`actions/cache@v4` keyed on `requirements.lock`) is hit on the second consecutive run; cold-install penalty (~90s) only occurs on cache miss; total workflow runtime remains under `timeout-minutes: 50`.
   3. User says "add this credentialed site" to Claude CLI — Claude inline-prompts for email + password in chat, calls `gh secret set SCRAPER_<COMPANY>_EMAIL` and `SCRAPER_<COMPANY>_PASSWORD --repo DevDesai444/new-grad`, confirms by running `gh secret list` (names only, no values), commits the adapter referencing `os.environ[<NAME>]`, and updates the README's secret-name audit table — none of the credential values ever appear in chat history, repo files, or Actions logs.
   4. `playwright-stealth` is applied only to sites that demonstrably need it (per-site flag in registry), not globally — verified by inspecting the registry config; sites that work without stealth do not pay its cost.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 03-01-PLAN.md — URL redirect resolver (`src/url_resolver.py` + `CompanyConfig.resolved_url` field) + registry/orchestrator wiring + `.github/workflows/scan.yml` Chromium install step + cache key on `requirements.lock` + `.gitignore` trace-debug extension (Wave 1; foundational — claims ADP-09 prerequisite)
+- [ ] 03-02-PLAN.md — `PlaywrightAdapter` (`src/adapters/playwright_fallback.py`): XHR-intercept-first + DOM-selector fallback against Anthropic seed target + `playwright-stealth` on by default + 60s navigation timeout + trace=off-in-prod + `pw:<host>:<id>` dedup keys + normalizer dispatch + registry append-as-catch-all-LAST (Wave 2; ADP-09 + ADP-10)
+- [ ] 03-03-PLAN.md — Credential workflow: `InvalidCredential` typed exception in `src/adapters/base.py` + `_attempt_login` flow reads `SCRAPER_<COMPANY_UPPERCASE>_<KIND>` env vars (SEC-02) + structural SEC-03 ban on credential-value logging + CLAUDE.md `## Adding a Company` 5-step workflow (per D-03 + D-03a) + README.md `## Credential Naming Convention (SEC-06)` with per-adapter audit table (Wave 3; SEC-01 + SEC-02 + SEC-04 + SEC-06)
 
 ### Phase 4: Extraction Polish + Health Observability
 **Goal**: Salary and Location columns are useful (not just `—`) for the majority of postings, and the README footer surfaces per-source health (ok / blocked / schema-drift / error) so the user can passively notice when a company's adapter has degraded without needing notifications.
@@ -93,7 +96,7 @@
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 3/3 | Execute-complete (verification pending) | 2026-06-08 |
 | 2. ATS Breadth + JD-Scan | 3/3 | Execute-complete (verification pending) — all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03 | 2026-06-08 |
-| 3. Playwright Fallback + Credential Workflow | 0/? | Not started | - |
+| 3. Playwright Fallback + Credential Workflow | 0/3 | Plans finalized — ready for `/gsd-execute-phase 3` | - |
 | 4. Extraction Polish + Health Observability | 0/? | Not started | - |
 
 ## Phase Ordering Rationale
@@ -122,3 +125,4 @@ This split is correct because Phase 1 has no plausible credentialed scrape (Gree
 ---
 *Roadmap created: 2026-06-07*
 *Phase 2 plans finalized: 2026-06-08 (Plans 02-01, 02-02, 02-03 — covers ADP-04..08 + FILT-03)*
+*Phase 3 plans finalized: 2026-06-08 (Plans 03-01, 03-02, 03-03 — covers ADP-09, ADP-10, SEC-01, SEC-02, SEC-04, SEC-06)*
