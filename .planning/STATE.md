@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Plan 04-02 execute-complete — FILT-07 US-only region filter shipped (is_us_location_acceptable in src/filter.py wired into orchestrator AFTER is_early_career with INFO log line on drops; REQUIREMENTS.md gains FILT-07 as 7th Filter entry); ready for Plan 04-03 (seen.json schema v1→v2 + source_health observability data)
-last_updated: "2026-06-08T18:12:24Z"
+status: verifying
+stopped_at: Plan 04-02 execute-complete — FILT-07 US-only filter shipped (is_us_location_acceptable + orchestrator wiring + REQUIREMENTS.md FILT-07 entry); ready for Plan 04-03 (seen.json schema v1→v2 + source_health observability data per CONTEXT.md D-04)
+last_updated: "2026-06-08T18:35:57.023Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # STATE: new-grad
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 04 (Extraction Polish + Health Observability) — EXECUTING
-Plan: 3 of 3
+Phase: 04 (Extraction Polish + Health Observability) — EXECUTE-COMPLETE (awaiting `/gsd-verify-phase 4`)
+Plan: 3 of 3 — Plan 04-03 complete
 **Milestone:** v1
-**Phase:** 4 — Extraction Polish + Health Observability — EXECUTING
-**Plan:** 04-02 complete — FILT-07 US-only region filter. `src/filter.py` exposes pure `is_us_location_acceptable(posting: Posting) -> bool` that wraps `src.locations.is_us_location(posting.location)`; no new business logic — all 8-rule classification lives in Plan 04-01's `src/locations.py`. `src/main.py` `_scrape_one` filter block rewritten from single-pass title-keyword gate to two-pass sequential form: title gate (FILT-01/02) → US-only gate (FILT-07) → state merge. Dropped non-US postings get `logger.info("scrape:%s drop FILT-07 non-US: %s (%s)", company.name, p.title, p.location)` — INFO not WARNING because correctly-filtered non-US is not an error; visible in Actions logs so the user can verify drops without instrumenting. `.planning/REQUIREMENTS.md` gains FILT-07 as 7th Filter bullet between FILT-06 and the Normalization heading (verbatim CONTEXT.md D-03 wording including the STATE-04 "never delete" carve-out note); Traceability table row `| FILT-07 | Phase 4 | Complete |`; Coverage block bumped (v1 total 71→72, FILT 6→7, Phase 4 distribution 3→4). Doc-as-test `test_filt07_documented_in_requirements_md` asserts 4 substring anchors (`**FILT-07**`, `is_us_location()`, `bias toward inclusion per FILT-05`, `| FILT-07 | Phase 4 |`) — fails on next CI if a future editor strips them. 25 net new tests (22 in tests/test_filter.py — 16-row parametrized + 5 spot-check/determinism + 1 doc-invariant; 3 in tests/test_orchestrator.py — London-drop, INFO log assertion via caplog, US-keep regression guard); 524 cumulative passing. ADP-15 re-proven an EIGHTH time (`git diff --name-only 36dd035..HEAD -- src/adapters/` = 0). FILT-07 ready to mark complete in REQUIREMENTS.md (already done in Task 3). Commits: 7ff1b0d Task 1 RED, 130382a Task 1 GREEN, c13cfad Task 2 RED, 463917c Task 2 GREEN, ce6dcd0 Task 3 doc.
-**Status:** Executing Phase 04
-**Progress:** [█████████░] 92%
+**Phase:** 4 — Extraction Polish + Health Observability — EXECUTE-COMPLETE
+**Plan:** 04-03 complete — Phase 4 EXECUTE-COMPLETE. `seen.json` schema bumped 1→2 with one-shot in-memory v1→v2 auto-migration (loader handles both versions; saver writes v2 only; v3+ raises UnknownSchemaVersion — STATE-08 invariant preserved). New top-level `source_health` block in `seen.json` records per-company `{last_attempt_utc, last_success_utc, status, consecutive_failures}` with status enum `ok` / `blocked` / `schema-drift` / `error`. `src/state_merger.py` adds `classify_outcome(outcome, prior_consecutive_failures) → (status, new_fail, is_success)` pure helper and `update_source_health(state, company, outcome, run_started_at) → None` in-place mutator (D-04b/D-04d). `src/main.py` per-company `update_source_health` call inserted between `merge_state` and `sanity_gate` — outcomes from `_scrape_one` are recorded; sanity-aborted runs save nothing (T-03-02 preserved). `.planning/REQUIREMENTS.md` OUT-09 amended with `[x] ~~**OUT-09**~~` + footnote pointing to CONTEXT.md D-04c (mirrors Phase 1 INFRA-05 + Phase 2 FILT-04 strikethrough patterns); Traceability row `Pending` → `Complete`. CRITICAL D-04c invariant honored: `src/renderer.py` and `README.md` UNTOUCHED — Source Health data lives in `seen.json` for diagnostic use only (future Claude CLI sessions consume directly). New fixtures `tests/fixtures/seen_v1_sample.json` + `tests/fixtures/seen_v2_sample.json` (~10 + ~21 lines). 31 net new tests (10 state_store: v1→v2 migration round-trip + v3 still raises + source_health defensive defaulting; 16 state_merger: 6 classify_outcome + 8 update_source_health + 2 merge_state source_health carryforward; 5 orchestrator: end-to-end source_health write + 3-run accumulation reaches 'blocked' + no-adapter → error + D-04c not-rendered invariant + REQUIREMENTS.md doc invariant); 555 cumulative passing. ADP-14/15 re-proven a NINTH time (`git diff --name-only` empty for `src/adapters/`). All 4 Phase 4 REQ-IDs closed: NORM-02 + NORM-03 (Plan 04-01), FILT-07 (Plan 04-02), OUT-09 (Plan 04-03). Commits: 2b65f9e Task 1 RED, 95f6ca6 Task 1 GREEN, 9b881c6 Task 2 RED, 7a424d7 Task 2 GREEN, 3e221a6 Task 3 RED, 59ff6a9 Task 3 GREEN.
+**Status:** Phase 04 execute-complete — awaiting `/gsd-verify-phase 4`
+**Progress:** [██████████] 100%
 
 ### Phase 1 Goal
 
@@ -47,10 +47,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Performance Metrics
 
-- **Phases complete:** 0/4 (Phase 1 + Phase 2 + Phase 3 all execute-complete; Phase 4 Plans 04-01 + 04-02 of 3 complete, awaiting verification)
-- **Requirements mapped:** 72/72 (100%) *[+1 since Plan 04-01: FILT-07 added per CONTEXT.md D-03]*
-- **Requirements validated:** 71/72 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03 + ADP-09 + ADP-10 in Plan 03-02 + SEC-01 + SEC-02 + SEC-04 + SEC-06 in Plan 03-03 + NORM-02 + NORM-03 in Plan 04-01 + FILT-07 in Plan 04-02)
-- **Plans complete:** 11/12 (3/3 Phase 01 + 3/3 Phase 02 + 3/3 Phase 03 + 2/3 Phase 04 — Plan 04-02: ~6min, 3 tasks via 5 commits, 4 modified files + 1 new SUMMARY, 25 net new tests / 524 cumulative)
+- **Phases complete:** 0/4 (Phase 1 + Phase 2 + Phase 3 all execute-complete; Phase 4 ALL 3 plans execute-complete, awaiting `/gsd-verify-phase 4` for full milestone close)
+- **Requirements mapped:** 72/72 (100%) *[FILT-07 added in Phase 4 per CONTEXT.md D-03]*
+- **Requirements validated:** 72/72 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03 + ADP-09 + ADP-10 in Plan 03-02 + SEC-01 + SEC-02 + SEC-04 + SEC-06 in Plan 03-03 + NORM-02 + NORM-03 in Plan 04-01 + FILT-07 in Plan 04-02 + OUT-09 in Plan 04-03) — **all v1 requirements closed**
+- **Plans complete:** 12/12 (3/3 Phase 01 + 3/3 Phase 02 + 3/3 Phase 03 + 3/3 Phase 04 — Plan 04-03: ~25min, 3 tasks via 6 commits (strict TDD RED→GREEN per task), 5 modified files + 2 new fixtures + 1 new SUMMARY, 31 net new tests / 555 cumulative)
 - **Existential risks addressed:** 5/5 in Phase 01 (unchanged)
 
 ### Per-Plan Metrics
@@ -68,6 +68,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 03    | 03   | 31min    | 3     | 9 (1 new + 8 mod)  |
 | 04    | 01   | ~50min   | 3     | 6 (2 new + 4 mod)  |
 | 04    | 02   | ~6min    | 3     | 5 (1 new + 4 mod)  |
+| 04    | 03   | ~25min   | 3     | 9 (2 new + 7 mod)  |
 
 ## Accumulated Context
 
@@ -171,6 +172,16 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 04-02 | REQUIREMENTS.md FILT-07 checkbox `[x]` on first insertion | Implementation lands in the same plan that adds the requirement; checking it on insertion is correct. Plan 04-01's NORM-02/NORM-03 closure annotations pre-existed as `[x]`; FILT-07 is fully new + fully shipped in one plan. |
 | 04-02 | Doc test uses `Path(__file__).resolve().parent.parent` for repo root | Robust to test cwd. pytest's default is repo root, but rootdir overrides or absolute pytest invocations would break a bare `Path('.planning/...').read_text()`. File-relative form is cwd-independent. |
 | 04-02 | Task 3 ships as a single doc commit, not RED+GREEN | Task 3's doc-invariant test was authored as part of Task 1 RED (the test lives in tests/test_filter.py per plan body's `<action>` block); Task 3 only needed REQUIREMENTS.md edits to flip that test GREEN. TDD discipline preserved — test was RED before doc edit, GREEN after. 5 commits total instead of 6 planned; net outcome identical. |
+| 04-03 | Schema migration is single-pass, in-memory: loader sees v1 → adds `source_health: {}` → bumps in-memory `schema_version` to 2; next save writes v2 | No on-load-and-write migration script; the next scan does it for free. Production runs migrate automatically on the first post-deploy execution. Minimizes blast radius — if migration logic is wrong, only in-memory state is affected; on-disk v1 is untouched until save_state_atomic runs. |
+| 04-03 | `_fresh_empty_state()` helper for independent EMPTY_STATE copies (cold-start + both-corrupted branches) | EMPTY_STATE is shallow; nested dicts are empty — a fresh inline dict literal works. Helper centralizes the shape so future field additions (e.g., Phase 5 v3 schema bump) only need a one-line change. Mirrors Phase 1 atomic-write helpers. |
+| 04-03 | Loader defensively defaults missing/wrong-type `source_health` to `{}` (Pitfall 1) | v2 mandates the key but partial-write recovery or future drift could land it absent / wrong-typed. Defaulting beats crashing — preserves Phase 1's "fail soft on corrupted state" pattern. Two explicit tests guard the contract. |
+| 04-03 | `merge_state` always emits `schema_version=SCHEMA_VERSION` (no longer preserves-from-prior) | Combined with load-time auto-migration, callers cannot accidentally write back a v1 dict. Single-source-of-truth: bump SCHEMA_VERSION in state_store and merge_state output follows. |
+| 04-03 | `classify_outcome` returns `(status, new_fail_count, is_success)` tuple, not just status | Caller-friendly: `update_source_health` reads all three with one call; `is_success` boolean is more expressive than `status == "ok"` substring check. Mirrors Phase 2 `get_adapter` precedent of multi-value returns when the caller needs branched behavior. |
+| 04-03 | 3-fail consecutive_failures threshold for 'blocked' status (per CONTEXT.md D-04b) | Single-run flakes (1-2 failures) read as 'error' — transient. Sustained block (3+) reads as 'blocked' — actionable. Surfaces persistent issues without notification noise from intermittent network blips. Threshold is a Phase-4 D-04b lock; not user-configurable. |
+| 04-03 | Source Health update runs BEFORE sanity_gate; sanity-aborted runs save nothing | T-03-02 preserved: state file unchanged on abort. The in-memory source_health mutation is discarded along with the merged postings — which is correct because a sanity-aborted run intentionally writes nothing. Diagnostic data only persists when the gate passes. |
+| 04-03 | REQUIREMENTS.md OUT-09 uses `[x] ~~**OUT-09**~~` (checked + strikethrough) | Data IS persisted (so [x] is honest); rendering surface is dropped (so strikethrough). Mirrors Phase 1 INFRA-05 + Phase 2 FILT-04 strikethrough patterns. The "checked-with-strikethrough" combo signals "shipped, but in a different form than originally specified". |
+| 04-03 | `src/renderer.py` UNTOUCHED per CONTEXT.md D-04c — explicit user request | User does not want a Source Health footer in README. Data lives in `seen.json.source_health` for future Claude CLI sessions to consume. The verifier's invariant test `test_orchestrator_source_health_not_rendered_in_readme` guards against regression. |
+| 04-03 | Ship 31 net new tests vs plan's "≥12 / cumulative ~440" target | Granular split per behavior: 10 state_store covering 4 bump invariants + 4 migration scenarios + 2 defensive-defaulting cases; 16 state_merger covering 6 classify_outcome enum cases + 8 update_source_health mutation paths + 2 merge_state carryforward; 5 orchestrator including 3-run cross-scan accumulation. Each documented D-04b/D-04d rule gets its own regression signal. Cumulative exceeds plan target (555 vs ≥440). |
 
 ### Open Decisions
 
@@ -197,7 +208,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Session Continuity
 
-**Last session:** 2026-06-08T18:12:24Z
+**Last session:** 2026-06-08T18:35:57.011Z
 **Last action:** Completed Plan 04-02 (3 tasks via 5 commits: 7ff1b0d Task 1 RED, 130382a Task 1 GREEN, c13cfad Task 2 RED, 463917c Task 2 GREEN, ce6dcd0 Task 3 doc). 524 cumulative tests pass; 25 net new (22 in tests/test_filter.py — TestIsUsLocationAcceptable parametrized + spot-check + determinism + bool-return + doc-invariant; 3 in tests/test_orchestrator.py — London-drop integration + INFO log assertion + US-keep regression). FILT-07 US-only region filter shipped: `is_us_location_acceptable(posting) -> bool` in src/filter.py wraps src.locations.is_us_location applied to posting.location; pure function per FILT-06. src/main.py `_scrape_one` runs FILT-07 AFTER is_early_career and BEFORE state merge per CONTEXT.md D-03a; dropped non-US postings get `logger.info("scrape:%s drop FILT-07 non-US: %s (%s)", ...)` line (INFO not WARNING — correctly-filtered non-US is not a bug). .planning/REQUIREMENTS.md gains FILT-07 as 7th Filter bullet + Traceability row + Coverage bumped 71→72 (FILT 6→7, Phase 4 = 3→4). Doc-as-test `test_filt07_documented_in_requirements_md` asserts 4 substring anchors. ADP-15 invariant preserved (git diff --name-only 36dd035..HEAD -- src/adapters/ = 0). Ruff clean. FILT-07 closed in REQUIREMENTS.md.
 **Previously:** Completed Plan 04-01 (3 TDD tasks, 6 commits: d4235db Task 1 RED, 160c9f8 Task 1 GREEN, fb547f1 Task 2 RED, d7b9e1b Task 2 GREEN, fc9bf83 Task 3 RED, 8550ee5 Task 3 GREEN). 499 cumulative tests pass; 124 net new (56 locations + 20 normalizer + 23 renderer + 25 parametrized expansions). ADP-15 invariant preserved. NORM-02 + NORM-03 closed.
 **Stopped at:** Plan 04-02 execute-complete — FILT-07 US-only filter shipped (is_us_location_acceptable + orchestrator wiring + REQUIREMENTS.md FILT-07 entry); ready for Plan 04-03 (seen.json schema v1→v2 + source_health observability data per CONTEXT.md D-04)
