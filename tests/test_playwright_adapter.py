@@ -27,7 +27,11 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.base import PlaywrightTimeout
+from src.adapters.base import (
+    InvalidCredential,
+    MissingCredential,
+    PlaywrightTimeout,
+)
 from src.adapters.playwright_fallback import (
     _DEFAULT_TIMEOUT_S,
     PlaywrightAdapter,
@@ -462,3 +466,313 @@ def test_playwright_adapter_is_last_in_adapters_list():
 def test_default_timeout_is_60s():
     """D-05 — default navigation timeout is 60s."""
     assert _DEFAULT_TIMEOUT_S == 60.0
+
+
+# ============================================================================
+# Phase 3 Plan 03-03 — Credential workflow (SEC-01/02/04 + D-02 + D-02c)
+# ============================================================================
+
+# HTML fixtures for credential tests — kept inline so they live with the tests
+# that consume them.
+
+_LOGIN_PERSISTENT_HTML = (
+    "<html><body>"
+    "<form>"
+    "<input type='email' name='email' />"
+    "<input type='password' name='password' />"
+    "<button type='submit' "
+    "onclick=\"event.preventDefault(); return false;\">Sign in</button>"
+    "</form>"
+    "</body></html>"
+)
+
+_LOGIN_THEN_REDIRECT_HTML = (
+    "<html><body>"
+    "<form id='login'>"
+    "<input type='email' name='email' />"
+    "<input type='password' name='password' />"
+    "<button type='submit' "
+    "onclick=\"event.preventDefault(); "
+    "document.getElementById('login').style.display='none';\">Sign in</button>"
+    "</form>"
+    "</body></html>"
+)
+
+_LOGIN_BLANK_HTML = (
+    "<html><body>"
+    "<p>career page, no login required</p>"
+    "<div data-testid='job-card'>"
+    "<h3>SWE New Grad</h3><p class='location'>Remote</p>"
+    "<a href='/jobs/1'>Apply</a>"
+    "</div>"
+    "</body></html>"
+)
+
+
+def _make_html_route(html: str):
+    """Route handler that serves the same HTML for every navigation request."""
+    def handler(context):
+        context.route(
+            "**/*",
+            lambda route: (
+                route.fulfill(
+                    status=200,
+                    content_type="text/html",
+                    body=html,
+                )
+                if route.request.resource_type == "document"
+                else route.fulfill(status=204, body="")
+            ),
+        )
+    return handler
+
+
+# --- _company_to_secret_prefix — SEC-02 secret-naming convention ------------
+
+
+def test_company_to_secret_prefix_uppercase_simple():
+    """Plan 03-03 D-02a — simple company name uppercased."""
+    assert PlaywrightAdapter._company_to_secret_prefix("amd") == "AMD"
+    assert PlaywrightAdapter._company_to_secret_prefix("Anthropic") == "ANTHROPIC"
+
+
+def test_company_to_secret_prefix_hyphens_become_underscores():
+    """Plan 03-03 D-02a — hyphens map to underscores so env var names are
+    POSIX-shell-safe.
+    """
+    assert (
+        PlaywrightAdapter._company_to_secret_prefix("acme-corp") == "ACME_CORP"
+    )
+    assert (
+        PlaywrightAdapter._company_to_secret_prefix("samsung-sra")
+        == "SAMSUNG_SRA"
+    )
+
+
+def test_company_to_secret_prefix_spaces_become_underscores():
+    """Plan 03-03 D-02a — spaces map to underscores for env var names."""
+    assert (
+        PlaywrightAdapter._company_to_secret_prefix("Big Co Inc")
+        == "BIG_CO_INC"
+    )
+
+
+# --- _detect_login_form — heuristic --------------------------------------
+
+
+def test_detect_login_form_positive(monkeypatch):
+    """Plan 03-03 — HTML with `<input type='password'>` -> _detect_login_form True.
+
+    Runs against a real Playwright page so the locator matches the live DOM.
+    """
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        try:
+            context = browser.new_context()
+            page = context.new_page()
+            page.set_content(_LOGIN_PERSISTENT_HTML)
+            assert PlaywrightAdapter._detect_login_form(page) is True
+        finally:
+            browser.close()
+
+
+def test_detect_login_form_negative_anthropic_fixture():
+    """Plan 03-03 — anthropic_sample.html has no password input -> False."""
+    from playwright.sync_api import sync_playwright
+
+    html = (_FIXTURES_DIR / "anthropic_sample.html").read_text()
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        try:
+            context = browser.new_context()
+            page = context.new_page()
+            page.set_content(html)
+            assert PlaywrightAdapter._detect_login_form(page) is False
+        finally:
+            browser.close()
+
+
+# --- MissingCredential when env vars unset (SEC-01) ---------------------
+
+
+def test_attempt_login_raises_missing_credential_when_email_unset(monkeypatch):
+    """Plan 03-03 — login form detected + EMAIL env var unset -> MissingCredential.
+
+    Per CONTEXT.md D-02: env var name pattern is `SCRAPER_<COMPANY>_<KIND>`.
+    """
+    monkeypatch.delenv("SCRAPER_TESTCO_EMAIL", raising=False)
+    monkeypatch.setenv("SCRAPER_TESTCO_PASSWORD", "irrelevant")
+
+    company = CompanyConfig(
+        name="testco",
+        url="https://login.testco.example/careers",
+        hint="playwright:timeout_s=3",
+    )
+    handler = _make_html_route(_LOGIN_PERSISTENT_HTML)
+    with pytest.raises(MissingCredential):
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+
+
+def test_attempt_login_raises_missing_credential_when_password_unset(monkeypatch):
+    """Plan 03-03 — login form detected + PASSWORD env var unset -> MissingCredential."""
+    monkeypatch.setenv("SCRAPER_TESTCO_EMAIL", "x@y.example")
+    monkeypatch.delenv("SCRAPER_TESTCO_PASSWORD", raising=False)
+
+    company = CompanyConfig(
+        name="testco",
+        url="https://login.testco.example/careers",
+        hint="playwright:timeout_s=3",
+    )
+    handler = _make_html_route(_LOGIN_PERSISTENT_HTML)
+    with pytest.raises(MissingCredential):
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+
+
+# --- InvalidCredential when form persists after submit (D-02c) -----------
+
+
+def test_attempt_login_raises_invalid_credential_when_form_persists(monkeypatch):
+    """Plan 03-03 — login form still visible after submit -> InvalidCredential.
+
+    Fixture's submit handler does `preventDefault(); return false;` so the form
+    never advances. Both env vars set; failure is a credential-rejection
+    heuristic, not a missing-env case.
+    """
+    monkeypatch.setenv("SCRAPER_TESTCO_EMAIL", "x@y.example")
+    monkeypatch.setenv("SCRAPER_TESTCO_PASSWORD", "wrong-password")
+
+    company = CompanyConfig(
+        name="testco",
+        url="https://login.testco.example/careers",
+        hint="playwright:timeout_s=5",
+    )
+    handler = _make_html_route(_LOGIN_PERSISTENT_HTML)
+    with pytest.raises(InvalidCredential):
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+
+
+def test_invalid_credential_message_never_includes_credential_values(monkeypatch):
+    """Plan 03-03 D-02c / SEC-03 / Pitfall 17 — exception message must NOT
+    include the email or password value, only the company name + URL +
+    diagnostic context.
+    """
+    secret_email = "secret-leak-canary@example.com"
+    secret_password = "PaSsW0rD-leak-canary"
+    monkeypatch.setenv("SCRAPER_TESTCO_EMAIL", secret_email)
+    monkeypatch.setenv("SCRAPER_TESTCO_PASSWORD", secret_password)
+
+    company = CompanyConfig(
+        name="testco",
+        url="https://login.testco.example/careers",
+        hint="playwright:timeout_s=5",
+    )
+    handler = _make_html_route(_LOGIN_PERSISTENT_HTML)
+    with pytest.raises(InvalidCredential) as exc_info:
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+    # The exception message MUST NOT contain the credential values.
+    msg = str(exc_info.value)
+    assert secret_email not in msg, (
+        f"SEC-03 violation: email leaked into InvalidCredential message: {msg!r}"
+    )
+    assert secret_password not in msg, (
+        f"SEC-03 violation: password leaked into InvalidCredential message: {msg!r}"
+    )
+    # Cause chain must also be suppressed (D-02c — `from None`).
+    assert exc_info.value.__cause__ is None
+
+
+# --- _company_to_secret_prefix wired through adapter ---------------------
+
+
+def test_attempt_login_uses_uppercased_hyphen_translated_env_vars(monkeypatch):
+    """Plan 03-03 D-02a — for `name='acme-corp'`, adapter must read
+    `SCRAPER_ACME_CORP_EMAIL` and `SCRAPER_ACME_CORP_PASSWORD`. We set those
+    (and ONLY those), confirm MissingCredential is NOT raised. Then the form
+    persists, so InvalidCredential is raised — proving the adapter reached
+    the form-fill path with credentials it could read.
+    """
+    monkeypatch.setenv("SCRAPER_ACME_CORP_EMAIL", "x@y.example")
+    monkeypatch.setenv("SCRAPER_ACME_CORP_PASSWORD", "anything")
+    # The lowercased / original name MUST NOT be the env var key.
+    monkeypatch.delenv("SCRAPER_acme-corp_EMAIL", raising=False)
+    monkeypatch.delenv("SCRAPER_acme-corp_PASSWORD", raising=False)
+
+    company = CompanyConfig(
+        name="acme-corp",
+        url="https://login.acme-corp.example/careers",
+        hint="playwright:timeout_s=5",
+    )
+    handler = _make_html_route(_LOGIN_PERSISTENT_HTML)
+    # Adapter found the env vars (no MissingCredential), submitted, form
+    # persisted, raised InvalidCredential.
+    with pytest.raises(InvalidCredential):
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+
+
+# --- No login form -> regular fetch flow (regression) -------------------
+
+
+def test_no_login_form_skips_credential_path():
+    """Plan 03-03 — pages with NO login form proceed through normal XHR /
+    DOM-fallback extraction. This is the common case; credential branch
+    must be silent.
+    """
+    handler = _make_html_route(_LOGIN_BLANK_HTML)
+    company = CompanyConfig(
+        name="nologin",
+        url="https://nologin.example/careers",
+        hint="playwright:timeout_s=5",
+    )
+    # XHR predicate won't fire; DOM fallback selects [data-testid='job-card'].
+    raw = PlaywrightAdapter().fetch(
+        company, _test_route_handler=handler,
+    )
+    assert len(raw) == 1
+    assert raw[0].raw["title"] == "SWE New Grad"
+
+
+# --- SEC-03 grep audit — no credential values in raise statements -------
+
+
+def test_sec03_grep_audit_no_credential_values_in_adapter_logging():
+    """Plan 03-03 D-02c — structural enforcement: no logger.* / print / raise
+    statement in playwright_fallback.py captures the RETURN VALUE of
+    os.environ.get(...) (which is the credential VALUE) into log output.
+
+    We grep for the pattern:
+      `SCRAPER_..._(EMAIL|PASSWORD|USERNAME|API_KEY|OAUTH_TOKEN)\\s*=`
+    in raise / logger / print lines. The convention is to LOG the env var NAME
+    (e.g., "SCRAPER_TESTCO_EMAIL") but NEVER assign it to a local + then
+    interpolate the local into a logger / raise.
+    """
+    src = Path("src/adapters/playwright_fallback.py").read_text()
+    # Lines with raise / log / print AND a SCRAPER_*_<KIND>= assignment
+    # would be the smoking gun. NO comment lines.
+    leaky_lines = []
+    for ln in src.splitlines():
+        stripped = ln.strip()
+        if stripped.startswith("#"):
+            continue
+        if not re.search(r"(raise |logger\.|print\()", stripped):
+            continue
+        if re.search(
+            r"SCRAPER_[A-Z_]+_(EMAIL|PASSWORD|USERNAME|API_KEY|OAUTH_TOKEN)\s*=",
+            stripped,
+        ):
+            leaky_lines.append(stripped)
+    assert leaky_lines == [], (
+        f"SEC-03 violation: credential VALUE assignment in raise/log/print: "
+        f"{leaky_lines}"
+    )
+
+
+def test_sec03_no_traceback_format_exc_in_adapter():
+    """Plan 03-03 D-02c — structural ban on `traceback.format_exc` in the
+    Playwright adapter (mirrors Phase 1 + 2 + Plan 03-01 + Plan 03-02 discipline).
+    """
+    src = Path("src/adapters/playwright_fallback.py").read_text()
+    assert src.count("traceback.format_exc") == 0, (
+        "SEC-03 violation: traceback.format_exc found in playwright_fallback.py"
+    )

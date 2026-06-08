@@ -42,7 +42,12 @@ from urllib.parse import urljoin, urlparse
 
 from selectolax.parser import HTMLParser
 
-from src.adapters.base import Adapter, PlaywrightTimeout
+from src.adapters.base import (
+    Adapter,
+    InvalidCredential,
+    MissingCredential,
+    PlaywrightTimeout,
+)
 from src.models import CompanyConfig, RawPosting
 
 logger = logging.getLogger("scan")
@@ -127,13 +132,113 @@ class PlaywrightAdapter(Adapter):
 
     Always registered LAST in ADAPTERS. matches() returns True for any
     http(s) URL - the 6 ATS adapters' specific matches() fire first.
+
+    Phase 3 Plan 03-03: optional credential flow for sites that gate postings
+    behind a login form. When `<input type='password'>` is detected after the
+    initial navigation, the adapter reads SCRAPER_<COMPANY_UPPERCASE>_<KIND>
+    env vars (SEC-01 / SEC-02 / D-02a), fills the form, submits, and waits
+    briefly. If the form persists after submit, raises InvalidCredential.
+    Per SEC-03 / Pitfall 17 / D-02c: NEVER logs credential values; uses
+    `raise ... from None` to suppress chained tracebacks that could leak
+    DOM text through __cause__.
     """
 
     name: ClassVar[str] = "playwright"
 
+    # Phase 3 Plan 03-03 — credential helpers + selectors. Kept as class
+    # constants so tests + downstream consumers can reference them.
+    _LOGIN_WAIT_MS: ClassVar[int] = 3000  # D-02c — bounded post-submit wait
+    _EMAIL_SELECTOR: ClassVar[str] = (
+        "input[type='email'], input[name='email'], input[name='username']"
+    )
+    _PASSWORD_SELECTOR: ClassVar[str] = "input[type='password']"
+    _SUBMIT_SELECTOR: ClassVar[str] = (
+        "button[type='submit'], input[type='submit'], "
+        "button:has-text('Sign in'), button:has-text('Log in')"
+    )
+
     @classmethod
     def matches(cls, url: str) -> bool:
         return url.startswith(("http://", "https://"))
+
+    @staticmethod
+    def _detect_login_form(page) -> bool:
+        """Heuristic: page has at least one `<input type='password'>` element.
+
+        Returns True if a password input is present; False otherwise. Tolerant
+        of any locator error — a malformed page must NEVER abort the scrape
+        (per Pitfall 1 / ADP-12).
+        """
+        try:
+            return page.locator(
+                PlaywrightAdapter._PASSWORD_SELECTOR
+            ).count() > 0
+        except Exception:
+            return False
+
+    @staticmethod
+    def _company_to_secret_prefix(company_name: str) -> str:
+        """Convert company name to `SCRAPER_<NAME>_<KIND>` prefix per SEC-02.
+
+        Uppercases the name; replaces hyphens and spaces with underscores so
+        the result is POSIX-shell-safe as an env-var name. Per CONTEXT.md D-02a.
+
+          'amd'         -> 'AMD'
+          'acme-corp'   -> 'ACME_CORP'
+          'Big Co Inc'  -> 'BIG_CO_INC'
+        """
+        return company_name.upper().replace("-", "_").replace(" ", "_")
+
+    def _attempt_login(self, page, company: CompanyConfig) -> None:
+        """Read SCRAPER_<COMPANY>_<KIND> env vars; fill form; submit; verify.
+
+        Per CONTEXT.md D-02 / D-02a (eager prompt + separate per-kind secrets)
+        and D-02c + SEC-03 + Pitfall 17 (structural ban on credential-value
+        logging — exception messages contain ONLY company name + env var
+        NAMES, never the values).
+
+        Raises:
+            MissingCredential: either EMAIL or PASSWORD env var is unset.
+            InvalidCredential: login form persists after submit + brief wait,
+                OR the fill/click selector failed (which typically means the
+                site changed its login UI — same user-visible outcome).
+        """
+        prefix = self._company_to_secret_prefix(company.name)
+        email_var = f"SCRAPER_{prefix}_EMAIL"
+        password_var = f"SCRAPER_{prefix}_PASSWORD"
+        email = os.environ.get(email_var)
+        password = os.environ.get(password_var)
+        if not email or not password:
+            # Note: we log the env var NAMES, never the values. NAMES are
+            # public information (they appear in README SEC-06 + CLAUDE.md).
+            raise MissingCredential(
+                f"Playwright {company.name}: missing env var "
+                f"{email_var} or {password_var}"
+            )
+
+        try:
+            page.fill(self._EMAIL_SELECTOR, email)
+            page.fill(self._PASSWORD_SELECTOR, password)
+            page.click(self._SUBMIT_SELECTOR)
+        except Exception as e:
+            # SEC-03 + D-02c: NEVER include exception attrs (DOM text may
+            # contain the typed email or other PII). `from None` suppresses
+            # the chained traceback that could leak through __cause__.
+            raise InvalidCredential(
+                f"Playwright {company.name}: login fill/submit failed "
+                f"({type(e).__name__})"
+            ) from None
+
+        # Bounded wait — 3s is enough for most auth pages to advance.
+        page.wait_for_timeout(self._LOGIN_WAIT_MS)
+
+        # D-02c — SEC-03: message says NOTHING about WHICH credential was tried.
+        if self._detect_login_form(page):
+            raise InvalidCredential(
+                f"Playwright {company.name}: login form still present "
+                "after submit (wrong credentials, anti-bot challenge, "
+                "or selector drift)"
+            )
 
     def fetch(
         self,
@@ -209,6 +314,28 @@ class PlaywrightAdapter(Adapter):
 
                 page = context.new_page()
                 page.set_default_navigation_timeout(timeout_ms)
+
+                # Plan 03-03 credential gate. Do an initial navigation so the
+                # page DOM is queryable for the login-form heuristic. If
+                # detected, authenticate; downstream XHR/DOM extraction
+                # continues against the now-authenticated page (we re-issue
+                # navigation inside expect_response so a fresh XHR can fire).
+                #
+                # The initial navigation here is bounded by the same
+                # navigation timeout; a navigation timeout still surfaces as
+                # PlaywrightTimeout downstream (both extraction paths fail).
+                try:
+                    page.goto(target_url, timeout=timeout_ms)
+                except PlaywrightTimeoutError:
+                    # Initial nav failed - let the XHR-intercept block also
+                    # try (it might race a redirect successfully). Don't
+                    # raise here; the downstream block decides.
+                    pass
+                if self._detect_login_form(page):
+                    # _attempt_login raises MissingCredential / InvalidCredential
+                    # on failure; both are typed exceptions the orchestrator
+                    # catches per ADP-12 isolation.
+                    self._attempt_login(page, company)
 
                 try:
                     # D-01a path A: XHR intercept first.
@@ -405,3 +532,7 @@ __all__ = [
     "_get_stealth_class",
     "_record_trace_started",
 ]
+# Plan 03-03 credential helpers are class methods on PlaywrightAdapter:
+#   PlaywrightAdapter._detect_login_form
+#   PlaywrightAdapter._company_to_secret_prefix
+#   PlaywrightAdapter._attempt_login
