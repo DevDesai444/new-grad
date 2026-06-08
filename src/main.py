@@ -31,7 +31,7 @@ from src.adapters.base import (
     SiteBlocked,
 )
 from src.config_loader import load_companies
-from src.filter import is_early_career
+from src.filter import is_early_career, is_us_location_acceptable
 from src.models import CompanyConfig, Posting
 from src.normalizer import normalize
 from src.registry import NoAdapterFound, get_adapter
@@ -94,6 +94,13 @@ def _scrape_one(
         return [], f"error: {type(e).__name__}"
 
     # Step 3: normalize + filter each posting (one-bad-posting isolation).
+    # Filter order per Phase 4 CONTEXT.md D-03a:
+    #   is_early_career (FILT-01/02 title gate)
+    #     → is_us_location_acceptable (FILT-07 US-only region gate)
+    #       → state merge.
+    # Dropped non-US postings are NEVER stored in seen.json (STATE-04's
+    # "never delete" still applies to entries already stored before
+    # FILT-07 shipped — see CONTEXT.md D-03a).
     postings: list[Posting] = []
     for rp in raw_postings:
         try:
@@ -104,8 +111,19 @@ def _scrape_one(
                 company.name, type(e).__name__, e,
             )
             continue
-        if is_early_career(p):
-            postings.append(p)
+        if not is_early_career(p):
+            continue  # FILT-01/02 title-keyword gate.
+        if not is_us_location_acceptable(p):
+            # FILT-07 — log + drop. INFO not WARNING: a non-US posting is
+            # not a bug; it's correctly filtered. The log line makes the
+            # filter behavior visible in Actions logs so the user can
+            # verify drops without instrumenting.
+            logger.info(
+                "scrape:%s drop FILT-07 non-US: %s (%s)",
+                company.name, p.title, p.location,
+            )
+            continue
+        postings.append(p)
     return postings, "ok"
 
 
