@@ -15,7 +15,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from src.filter import extract_experience_range, is_early_career
+from src.filter import (
+    extract_experience_range,
+    is_early_career,
+    is_us_location_acceptable,
+)
 from src.models import Posting
 
 _NOW = datetime(2026, 6, 7, 14, 0, 0, tzinfo=UTC)
@@ -241,3 +245,121 @@ def test_extract_within_truncation_window_still_matches():
     """A signal at position 4999 (within the cap) still matches."""
     prefix = "X" * 4900
     assert extract_experience_range(prefix + " 0-3 years experience") == (0, 3)
+
+
+# --- FILT-07: is_us_location_acceptable (Plan 04-02 / CONTEXT.md D-03) ---------
+#
+# Pure function wrapping src.locations.is_us_location applied to Posting.location.
+# Runs AFTER is_early_career (title-keyword gate) and BEFORE state merge per
+# D-03a. Non-US postings are dropped; ambiguous / empty are kept (FILT-05 bias).
+
+
+def _make_posting_loc(location: str) -> Posting:
+    """Helper — minimal Posting with the location field under test."""
+    return Posting(
+        dedup_key="x:loc:1",
+        company="X",
+        title="New Grad SWE",
+        location=location,
+        salary=None,
+        experience_min=None,
+        experience_max=None,
+        posting_url="https://example.com/jobs/1",
+        posted_date=None,
+        first_seen=_NOW,
+        last_seen=_NOW,
+        still_listed=True,
+        source_adapter="greenhouse",
+    )
+
+
+class TestIsUsLocationAcceptable:
+    """FILT-07 — wraps src.locations.is_us_location for Posting filtering."""
+
+    @pytest.mark.parametrize(
+        "loc,expected",
+        [
+            # US — city + state token (rule 3 / 5)
+            ("San Francisco, CA", True),
+            ("Boston, MA", True),
+            ("Cupertino, CA", True),
+            ("New York, NY", True),
+            ("Seattle, WA", True),
+            # US — country token (rule 4)
+            ("Anywhere, USA", True),
+            ("Houston, United States", True),
+            # US — Remote canonical (rule 2)
+            ("Remote (US)", True),
+            # Non-US — Remote canonical (rule 2)
+            ("Remote (non-US)", False),
+            # Non-US — known city/country substring (rule 6)
+            ("London, UK", False),
+            ("Bangalore, India", False),
+            ("Berlin, Germany", False),
+            ("Toronto, Canada", False),
+            ("Singapore", False),
+            # Ambiguous / empty — FILT-05 bias keeps (rule 1 / rule 7)
+            ("", True),
+            ("XYZ Made Up Place", True),
+        ],
+    )
+    def test_is_us_location_acceptable(self, loc, expected):
+        assert is_us_location_acceptable(_make_posting_loc(loc)) is expected
+
+    def test_is_us_location_acceptable_keeps_sf_posting(self):
+        """Spot-check the documented London-drop / SF-keep success criterion."""
+        assert (
+            is_us_location_acceptable(_make_posting_loc("San Francisco, CA"))
+            is True
+        )
+
+    def test_is_us_location_acceptable_drops_london_posting(self):
+        """Spot-check the documented London-drop / SF-keep success criterion."""
+        assert (
+            is_us_location_acceptable(_make_posting_loc("London, UK")) is False
+        )
+
+    def test_is_us_location_acceptable_keeps_empty_per_filt05_bias(self):
+        """Empty location → True (bias toward inclusion — FILT-05)."""
+        assert is_us_location_acceptable(_make_posting_loc("")) is True
+
+    def test_is_us_location_acceptable_is_deterministic(self):
+        """Pure function — same Posting → same answer twice in a row."""
+        p = _make_posting_loc("London, UK")
+        first = is_us_location_acceptable(p)
+        second = is_us_location_acceptable(p)
+        assert first is second
+        assert isinstance(first, bool)
+
+    def test_is_us_location_acceptable_returns_bool(self):
+        """Return type is bool (not truthy-int / not None)."""
+        result = is_us_location_acceptable(_make_posting_loc("Boston, MA"))
+        assert isinstance(result, bool)
+
+
+# --- Task 3 doc-as-test: REQUIREMENTS.md FILT-07 invariant ---------------------
+
+
+def test_filt07_documented_in_requirements_md():
+    """Doc-rot canary — assert REQUIREMENTS.md has the FILT-07 entry + traceability row.
+
+    Mirrors the Phase 3 doc-invariant test pattern. If a future editor strips
+    or renames FILT-07's substring anchors, this test fails on the next CI run.
+    """
+    from pathlib import Path
+
+    # Resolve relative to this test file so test cwd doesn't matter.
+    repo_root = Path(__file__).resolve().parent.parent
+    content = (repo_root / ".planning" / "REQUIREMENTS.md").read_text(
+        encoding="utf-8",
+    )
+    assert "**FILT-07**" in content, "FILT-07 entry missing from REQUIREMENTS.md"
+    assert "is_us_location()" in content, (
+        "FILT-07 description must reference is_us_location()"
+    )
+    assert "bias toward inclusion per FILT-05" in content, (
+        "FILT-07 must affirm FILT-05 bias toward inclusion"
+    )
+    assert "| FILT-07 | Phase 4 |" in content, (
+        "FILT-07 Traceability row missing"
+    )
