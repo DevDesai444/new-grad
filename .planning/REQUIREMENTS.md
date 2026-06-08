@@ -59,8 +59,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Normalization & Extraction (NORM)
 
 - [x] **NORM-01**: A canonical `Posting` model includes: `dedup_key`, `company`, `title`, `location`, `salary`, `experience_min`, `experience_max`, `posting_url`, `posted_date`, `first_seen`, `last_seen`, `still_listed`, `source_adapter`
-- [ ] **NORM-02**: Salary extraction recognizes range (`$X–$Y`), ceiling (`up to $X`), hourly (`$X/hr`), and currency-prefixed formats; unparseable salary renders as `—`
-- [ ] **NORM-03**: Location normalization collapses `Remote, United States` / `Remote — US` / `Remote (USA)` to a consistent `Remote (US)` form
+- [x] ~~**NORM-02**: Salary extraction recognizes range (`$X–$Y`), ceiling (`up to $X`), hourly (`$X/hr`), and currency-prefixed formats; unparseable salary renders as `—`~~  *[Softened per Phase 4 CONTEXT.md D-01: salary is VERBATIM copy-paste from the ATS-provided field — no parsing, no currency conversion. Each adapter's normalizer reads a source-specific field path; renderer coalesces empty / non-numeric placeholders (Competitive / DOE / TBD / Not disclosed / N/A / null / Negotiable / etc.) to `—` per D-01a; 80-char truncation per D-01b. Closed by Plan 04-01.]*
+- [x] **NORM-03**: Location normalization collapses `Remote, United States` / `Remote — US` / `Remote (USA)` to a consistent `Remote (US)` form  *[Closed by Plan 04-01: `src/locations.py:normalize_location()` collapses ~10 Remote-variant shapes to canonical `Remote (US)` / `Remote (non-US)` tokens; non-Remote strings unchanged per D-02b. All 7 per-adapter normalizer helpers route through it.]*
 - [x] **NORM-04**: Posted date is extracted from the source adapter when exposed; missing dates leave `posted_date` null
 - [x] **NORM-05**: All dates are normalized to UTC ISO 8601 strings
 - [x] **NORM-06**: URL canonicalization strips known tracking params (`utm_*`, `gh_src`, `lever-source`), lowercases the host, and removes trailing slashes — applied to `posting_url` before storage
@@ -190,8 +190,8 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | FILT-05 | Phase 1 | Complete |
 | FILT-06 | Phase 1 | Complete |
 | NORM-01 | Phase 1 | Complete |
-| NORM-02 | Phase 4 | Pending |
-| NORM-03 | Phase 4 | Pending |
+| NORM-02 | Phase 4 | Complete (Plan 04-01) |
+| NORM-03 | Phase 4 | Complete (Plan 04-01) |
 | NORM-04 | Phase 1 | Complete |
 | NORM-05 | Phase 1 | Complete |
 | NORM-06 | Phase 1 | Complete |
