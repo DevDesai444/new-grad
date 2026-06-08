@@ -1,0 +1,157 @@
+{
+  "last_run_utc": "2026-06-08T20:55:41.993245+00:00",
+  "postings": {},
+  "schema_version": 2,
+  "source_health": {
+    "adobe": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "amazon": {
+      "consecutive_failures": 0,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": "2026-06-08T20:55:41.993245+00:00",
+      "status": "ok"
+    },
+    "amd": {
+      "consecutive_failures": 0,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": "2026-06-08T20:55:41.993245+00:00",
+      "status": "ok"
+    },
+    "apple": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "arm": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "arrow": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "schema-drift"
+    },
+    "bloomberg": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "careers": {
+      "consecutive_failures": 4,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "careers.html": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "company": {
+      "consecutive_failures": 2,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "content": {
+      "consecutive_failures": 2,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "en-us": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "en_US": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "gartner": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "gm": {
+      "consecutive_failures": 0,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": "2026-06-08T20:55:41.993245+00:00",
+      "status": "ok"
+    },
+    "google": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "jpmorgan": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "lenovo": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "linkedin": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "metacareers": {
+      "consecutive_failures": 0,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": "2026-06-08T20:55:41.993245+00:00",
+      "status": "ok"
+    },
+    "micron": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "schema-drift"
+    },
+    "microsoft": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "servicenow": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "us": {
+      "consecutive_failures": 2,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    },
+    "us-en": {
+      "consecutive_failures": 1,
+      "last_attempt_utc": "2026-06-08T20:55:41.993245+00:00",
+      "last_success_utc": null,
+      "status": "error"
+    }
+  }
+}
