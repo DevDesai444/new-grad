@@ -112,3 +112,60 @@ def test_fetch_raises_schema_drift_on_missing_jobs_key(stripe_company):
     ).mock(return_value=httpx.Response(200, json={"meta": {"total": 0}}))
     with pytest.raises(SchemaDrift):
         GreenhouseAdapter().fetch(stripe_company)
+
+
+# --- Plan 02-03 Task 3: retroactive D-03 error-path tests --------------------
+# Closes Phase 1 D-07 / W-1 debt — Greenhouse adapter now has parity D-03
+# coverage with the 5 newer adapters (happy + 2 SchemaDrift + 3 SiteBlocked +
+# 1 generic propagation). The 2 existing single-line smoke tests above
+# (test_fetch_raises_site_blocked_on_403,
+# test_fetch_raises_schema_drift_on_missing_jobs_key) plus these 4 = full set.
+# Source adapter src/adapters/greenhouse.py is INTENTIONALLY UNCHANGED — this
+# task only adds tests that exercise previously-untested branches that the
+# code has been raising since Phase 1.
+
+
+@respx.mock
+def test_fetch_raises_schema_drift_on_wrong_jobs_type(stripe_company):
+    """`jobs` key present but value is not a list -> SchemaDrift."""
+    respx.get(
+        "https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true"
+    ).mock(return_value=httpx.Response(200, json={"jobs": "not a list"}))
+    with pytest.raises(SchemaDrift):
+        GreenhouseAdapter().fetch(stripe_company)
+
+
+@respx.mock
+def test_fetch_raises_site_blocked_on_429(stripe_company):
+    """HTTP 429 rate-limit -> SiteBlocked (not the 403 branch)."""
+    respx.get(
+        "https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true"
+    ).mock(return_value=httpx.Response(429, text="Too Many Requests"))
+    with pytest.raises(SiteBlocked):
+        GreenhouseAdapter().fetch(stripe_company)
+
+
+@respx.mock
+def test_fetch_raises_site_blocked_on_5xx(stripe_company):
+    """HTTP 5xx server-error -> SiteBlocked (the >=500 branch in greenhouse.py)."""
+    respx.get(
+        "https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true"
+    ).mock(return_value=httpx.Response(503, text="Service Unavailable"))
+    with pytest.raises(SiteBlocked):
+        GreenhouseAdapter().fetch(stripe_company)
+
+
+@respx.mock
+def test_fetch_propagates_generic_exception(stripe_company):
+    """httpx.NetworkError propagates as httpx.HTTPError (orchestrator catches).
+
+    Greenhouse adapter intentionally does NOT wrap network errors in a typed
+    exception — they bubble up to the orchestrator's per-company catch-all
+    (ADP-12). NetworkError is a subclass of HTTPError so `with pytest.raises
+    (httpx.HTTPError)` matches.
+    """
+    respx.get(
+        "https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true"
+    ).mock(side_effect=httpx.NetworkError("dns failure"))
+    with pytest.raises(httpx.HTTPError):
+        GreenhouseAdapter().fetch(stripe_company)
