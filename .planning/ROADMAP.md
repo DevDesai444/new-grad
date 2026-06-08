@@ -73,7 +73,7 @@
   4. `playwright-stealth` is applied only to sites that demonstrably need it (per-site flag in registry), not globally — verified by inspecting the registry config; sites that work without stealth do not pay its cost.
 **Plans**: 3 plans
 - [x] 03-01-PLAN.md — URL redirect resolver (`src/url_resolver.py` + `CompanyConfig.resolved_url` field) + registry/orchestrator wiring + `.github/workflows/scan.yml` Chromium install step + cache key on `requirements.lock` + `.gitignore` trace-debug extension (Wave 1; foundational — claims ADP-09 prerequisite) — **COMPLETE 2026-06-08** (commits 70fb47d, 07489cd; 316 tests; ADP-14/15 preserved)
-- [ ] 03-02-PLAN.md — `PlaywrightAdapter` (`src/adapters/playwright_fallback.py`): XHR-intercept-first + DOM-selector fallback against Anthropic seed target + `playwright-stealth` on by default + 60s navigation timeout + trace=off-in-prod + `pw:<host>:<id>` dedup keys + normalizer dispatch + registry append-as-catch-all-LAST (Wave 2; ADP-09 + ADP-10)
+- [x] 03-02-PLAN.md — `PlaywrightAdapter` (`src/adapters/playwright_fallback.py`): XHR-intercept-first + DOM-selector fallback against Anthropic seed target + `playwright-stealth` on by default + 60s navigation timeout + trace=off-in-prod + `pw:<host>:<id>` dedup keys + normalizer dispatch + registry append-as-catch-all-LAST (Wave 2; ADP-09 + ADP-10) — **COMPLETE 2026-06-08** (commits 7202dc0, ac6f40f; 348 tests; ADP-14/15 preserved with 7 adapters)
 - [ ] 03-03-PLAN.md — Credential workflow: `InvalidCredential` typed exception in `src/adapters/base.py` + `_attempt_login` flow reads `SCRAPER_<COMPANY_UPPERCASE>_<KIND>` env vars (SEC-02) + structural SEC-03 ban on credential-value logging + CLAUDE.md `## Adding a Company` 5-step workflow (per D-03 + D-03a) + README.md `## Credential Naming Convention (SEC-06)` with per-adapter audit table (Wave 3; SEC-01 + SEC-02 + SEC-04 + SEC-06)
 
 ### Phase 4: Extraction Polish + Health Observability
@@ -96,7 +96,7 @@
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 3/3 | Execute-complete (verification pending) | 2026-06-08 |
 | 2. ATS Breadth + JD-Scan | 3/3 | Execute-complete (verification pending) — all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03 | 2026-06-08 |
-| 3. Playwright Fallback + Credential Workflow | 0/3 | Plans finalized — ready for `/gsd-execute-phase 3` | - |
+| 3. Playwright Fallback + Credential Workflow | 2/3 | Executing — Waves 1+2 complete (URL resolver + PlaywrightAdapter); Wave 3 (credential workflow) pending | - |
 | 4. Extraction Polish + Health Observability | 0/? | Not started | - |
 
 ## Phase Ordering Rationale

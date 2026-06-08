@@ -39,8 +39,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **ADP-06**: SmartRecruiters adapter — fetches `api.smartrecruiters.com/v1/companies/<co>/postings`, stable key `sr:<co>:<id>`
 - [x] **ADP-07**: Workday adapter — POSTs to `<tenant>.wd<N>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs` with pagination, stable key `wd:<tenant>:<id>`, handles epoch-ms dates
 - [x] **ADP-08**: Apple Jobs adapter — POSTs to `jobs.apple.com/api/role/search`, stable key `apple:<id>`
-- [ ] **ADP-09**: Playwright fallback adapter — uses Chromium with `wait_for_selector` or `expect_response` interception, 20s per-page navigation timeout, post-render parse via selectolax
-- [ ] **ADP-10**: `playwright-stealth` is applied conditionally only on sites that demonstrably need it (per-site flag in registry)
+- [x] **ADP-09**: Playwright fallback adapter — uses Chromium with `wait_for_selector` or `expect_response` interception, 20s per-page navigation timeout, post-render parse via selectolax  *[Phase 3 Plan 03-02: timeout default raised to 60s per CONTEXT.md D-05; XHR-intercept-first via `page.expect_response` + DOM-selector fallback via `wait_for_selector` + selectolax HTML parse implemented in `src/adapters/playwright_fallback.py`.]*
+- [x] **ADP-10**: `playwright-stealth` is applied conditionally only on sites that demonstrably need it (per-site flag in registry)  *[Phase 3 Plan 03-02: D-04 inverts default — stealth ON by default; per-site opt-out via `#adapter=playwright:stealth=false` in `companies.txt`.]*
 - [x] **ADP-11**: Each adapter raises typed errors: `SiteBlocked` (rate limit / IP block), `SchemaDrift` (pydantic validation failed), `PlaywrightTimeout`, or generic `Exception` — distinct from "zero results found"
 - [x] **ADP-12**: One company's adapter failure is caught by the orchestrator and does not abort the run for the other companies
 - [x] **ADP-13**: Per-adapter unit tests run against recorded JSON fixtures in `tests/fixtures/` via `respx` for HTTP mocking
@@ -176,8 +176,8 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | ADP-06 | Phase 2 | Complete |
 | ADP-07 | Phase 2 | Complete |
 | ADP-08 | Phase 2 | Complete |
-| ADP-09 | Phase 3 | Pending |
-| ADP-10 | Phase 3 | Pending |
+| ADP-09 | Phase 3 | Complete |
+| ADP-10 | Phase 3 | Complete |
 | ADP-11 | Phase 1 | Complete |
 | ADP-12 | Phase 1 | Complete |
 | ADP-13 | Phase 1 | Complete |

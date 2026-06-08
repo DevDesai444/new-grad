@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plan 03-01 execute-complete — URL resolver + Playwright cache foundation landed; ready for Plan 03-02 (PlaywrightAdapter)
-last_updated: "2026-06-08T13:56:16.511Z"
+stopped_at: Plan 03-02 execute-complete — PlaywrightAdapter (XHR-intercept + DOM-fallback + stealth + 60s timeout + trace policy) landed and wired into registry as catch-all LAST; ready for Plan 03-03 (credential workflow)
+last_updated: "2026-06-08T14:30:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
-  percent: 78
+  completed_plans: 8
+  percent: 89
 ---
 
 # STATE: new-grad
@@ -26,12 +26,12 @@ progress:
 ## Current Position
 
 Phase: 03 (Playwright Fallback + Credential Workflow) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 **Milestone:** v1
 **Phase:** 3 — Playwright Fallback + Credential Workflow
-**Plan:** 03-01 complete — URL redirect resolver + CompanyConfig.resolved_url field + registry dispatch update + orchestrator wiring + workflow Chromium install/cache (commits 70fb47d Task 1, 07489cd Task 2); 316 cumulative tests passing (+18 new); foundation for Plan 03-02 PlaywrightAdapter landed. ADP-14/15 re-proven: zero edits to src/adapters/*.
+**Plan:** 03-02 complete — PlaywrightAdapter (`src/adapters/playwright_fallback.py`) with XHR-intercept-first + DOM-selector fallback + playwright-stealth on by default + 60s navigation timeout + trace=off-in-prod (SCRAPER_DEBUG_TRACE escape hatch) + `pw:<host>:<id>` dedup keys; wired into registry as catch-all LAST per D-01c (now 7 adapters); normalizer gained `_normalize_playwright` + `_read_playwright_description` (commits 7202dc0 Task 1, ac6f40f Task 2); 348 cumulative tests passing (+32 new: 22 adapter + 5 normalizer + 5 registry — net +10 after 2 NoAdapterFound tests rewritten as PlaywrightAdapter dispatch tests). ADP-09 + ADP-10 closed. ADP-14/15 re-proven: zero edits to any of the 6 existing src/adapters/{greenhouse,lever,ashby,smartrecruiters,workday,apple}.py.
 **Status:** Executing Phase 03
-**Progress:** [████████░░] 78%
+**Progress:** [█████████░] 89%
 
 ### Phase 1 Goal
 
@@ -47,10 +47,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Performance Metrics
 
-- **Phases complete:** 0/4 (Phase 1 + Phase 2 both execute-complete, awaiting verification; Phase 3 wave 1/3 complete)
+- **Phases complete:** 0/4 (Phase 1 + Phase 2 both execute-complete, awaiting verification; Phase 3 waves 1+2/3 complete)
 - **Requirements mapped:** 71/71 (100%)
-- **Requirements validated:** 62/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03; ADP-09 partial via Plan 03-01 infrastructure prerequisite — adapter implementation pending in Plan 03-02)
-- **Plans complete:** 7/9 (3/3 Phase 01 + 3/3 Phase 02 + 1/3 Phase 03 — Plan 03-01: ~10min, 2 tasks, 3 created + 8 modified files, 18 new tests / 316 cumulative)
+- **Requirements validated:** 64/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03; ADP-09 + ADP-10 closed by Plan 03-02 PlaywrightAdapter)
+- **Plans complete:** 8/9 (3/3 Phase 01 + 3/3 Phase 02 + 2/3 Phase 03 — Plan 03-02: ~25min, 2 tasks, 4 created + 5 modified files, 32 net new tests / 348 cumulative)
 - **Existential risks addressed:** 5/5 in Phase 01 (unchanged)
 
 ### Per-Plan Metrics
@@ -64,6 +64,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 02    | 02   | ~25min   | 2     | 5 (3 new + 2 mod)  |
 | 02    | 03   | ~30min   | 3     | 10 (3 new + 7 mod) |
 | 03    | 01   | ~10min   | 2     | 11 (3 new + 8 mod) |
+| 03    | 02   | ~25min   | 2     | 9 (4 new + 5 mod)  |
 
 ## Accumulated Context
 
@@ -130,6 +131,17 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 03-01 | Ship 18 tests vs plan's nominal "19 / cumulative 317" target | Plan body enumerated 8 distinct resolver semantic cases + 2 models + 3 registry + 2 orchestrator + 3 workflow_yaml = 18 substantively. The "≥317" success criterion was rounded; substance matches plan body verbatim. |
 | 03-01 | Reworded `traceback.format_exc()` reference in resolver docstring to `the full traceback` | Plan AC: `grep -c traceback.format_exc src/url_resolver.py == 0`. Same precedent as Phase 1 Plan 01-03 docstring rewordings; intent preserved. |
 | 03-01 | Phase 3 .gitignore additions skip `playwright-report/` (already in Phase 1 list); add only `.playwright-trace/` and `playwright/.cache/` | Avoids duplicate gitignore entries; Phase 1 already covered `playwright-report/`. Plan's `<artifacts>` block listed all three; matching disposition — Phase 3 contributes the two truly new ones. |
+| 03-02 | Documented `_test_route_handler` kwarg on `PlaywrightAdapter.fetch` as the test seam (Callable[[BrowserContext], None] \| None = None) | Mirrors Phase 2 `seen_keys` precedent — single documented optional kwarg with a clear test-injection role; production code never passes it. Cleaner than monkeypatching internals or subclassing. |
+| 03-02 | Wrapped `playwright_stealth.Stealth` import in `_get_stealth_class()` indirection | Tests monkeypatch `_get_stealth_class` to return a sentinel that records calls — needed for the stealth-on/off assertions. Production: function returns the real Stealth class lazily on first use. |
+| 03-02 | Added `_record_trace_started()` no-op hook called only when context.tracing.start() runs | Test-observable indirection — tests monkeypatch to detect trace activation without inspecting Playwright internals. Mirrors the `_get_stealth_class` pattern; production no-op. |
+| 03-02 | `_test_route_handler` callback receives the `BrowserContext` (not the page) so tests can install `context.route()` mocks BEFORE any navigation fires | Page routes don't apply to in-flight navigations; context routes do. Tests use `context.route('**/api/jobs', ...)` and `context.route('https://www.anthropic.com/careers', ...)` to mock both the navigation document and the XHR — no real network in CI. |
+| 03-02 | Removed `pytest.mark.slow` decorators from Playwright runtime tests | The marker generated `PytestUnknownMarkWarning` and wasn't gated anywhere. Tests run in ~40s total — acceptable in CI without a slow-gate. |
+| 03-02 | Rewrote 2 Phase 1 NoAdapterFound assertions as PlaywrightAdapter dispatch assertions | Phase 3 D-01c invalidates the prior "unknown http(s) URL → NoAdapterFound" contract — catch-all now matches any http(s). Replaced `test_unknown_url_raises` and `test_unrecognized_hint_no_url_match_raises` with `test_unknown_http_url_dispatches_to_playwright_catch_all` and `test_unrecognized_hint_no_url_match_dispatches_to_playwright`. NoAdapterFound contract still holds for non-http schemes (CompanyConfig's url validator stops those upstream). |
+| 03-02 | Updated `test_new_adapter_can_be_added_without_touching_existing_files` to INSERT before catch-all at len-1, not APPEND | Catch-all-last invariant means appended adapters never get a chance to match (Playwright matches any http(s) URL first in the loop). Inserting at `len(ADAPTERS) - 1` preserves both invariants: open-closed proof + catch-all is still last. |
+| 03-02 | `src/filter.py` NOT modified — `_read_playwright_description` lives in normalizer.py alongside the 6 sibling `_read_<adapter>_description` helpers | Plan frontmatter listed filter.py defensively; plan body / Task 2 action block correctly identified that helpers live in normalizer.py per Phase 2 precedent. Zero filter.py edits; commit message documents the divergence. |
+| 03-02 | NoAdapterFound docstring updated to note Phase 3 catch-all eliminates the error for http(s) URLs | Diagnostic clarity — future readers see WHY NoAdapterFound is now nearly-unreachable instead of being puzzled. |
+| 03-02 | Ship 32 net new tests (22 adapter + 5 normalizer + 5 registry) vs plan's "≥20-25" budget | Granular split per behavior (matches() 3 cases, hint parse 5, id extraction 3, XHR/DOM/timeout 3, dedup key 2, stealth 2, trace 2, catch-all/default 2 in adapter; 5 normalizer including alt-date-key + URL canonicalization; 5 registry covering all dispatch orderings). Defends each documented behavior with its own regression signal. |
+| 03-02 | Manually installed Chromium via `playwright install chromium` before running tests | Local dev environment didn't have Chromium cached. In CI, Plan 03-01's workflow step (`playwright install --with-deps chromium`) + `actions/cache@v4` handle this. Tests fail-fast with clear error if Chromium absent — no silent skip. |
 
 ### Open Decisions
 
@@ -156,10 +168,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Session Continuity
 
-**Last session:** 2026-06-08T13:53:00Z
-**Last action:** Completed Plan 03-01 (2 tasks committed: 70fb47d Task 1 = src/url_resolver.py + CompanyConfig.resolved_url field per D-01b + 8 resolver tests + 2 model tests; 07489cd Task 2 = registry.get_adapter dispatches on resolved_url + main.py orchestrator wiring with defense-in-depth try/except + workflow YAML Chromium install step + .gitignore Phase 3 trace paths + 3 registry tests + 2 orchestrator tests + 3 workflow_yaml tests); 316/316 cumulative tests passing (298 baseline + 18 new); `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/03-playwright-fallback-credential-workflow/03-01-SUMMARY.md`. CNAME→Workday dispatch path proven manually (`CompanyConfig(name='amd', url='https://careers.amd.com', resolved_url='https://amd.wd5.myworkdayjobs.com/External')` → `WorkdayAdapter`). ADP-14/15 open-closed re-proven a fourth time: zero edits to src/adapters/* in this plan. ADP-09 infrastructure prerequisite closed; adapter implementation proper lands in Plan 03-02.
-**Stopped at:** Plan 03-01 execute-complete — URL resolver + Playwright cache foundation landed; ready for Plan 03-02 (PlaywrightAdapter)
-**Resume file:** `.planning/phases/03-playwright-fallback-credential-workflow/03-01-SUMMARY.md` (Phase 3 Wave 1 done; next is Wave 2 = PlaywrightAdapter)
+**Last session:** 2026-06-08T14:30:00Z
+**Last action:** Completed Plan 03-02 (2 tasks committed: 7202dc0 Task 1 = src/adapters/playwright_fallback.py PlaywrightAdapter with XHR-intercept-first via page.expect_response + DOM-selector fallback via wait_for_selector + selectolax + playwright-stealth on by default (D-04) + 60s navigation timeout (D-05) + trace=off-in-prod with SCRAPER_DEBUG_TRACE escape hatch (D-06) + `pw:<host>:<id>` dedup keys with sha256(url)[:16] fallback (Pitfall 9) + tests/fixtures/anthropic_sample.{json,html} + tests/test_playwright_adapter.py 22 tests; ac6f40f Task 2 = registry imports PlaywrightAdapter + appends LAST in ADAPTERS per D-01c (now 7 adapters total) + normalizer gains _normalize_playwright + _read_playwright_description + 'playwright' key in _DISPATCH + 5 normalizer tests + 5 registry tests + updated test_new_adapter_can_be_added to insert before catch-all + rewrote 2 NoAdapterFound assertions as PlaywrightAdapter dispatch assertions); 348/348 cumulative tests passing (316 baseline + 22 adapter + 5 normalizer + 5 registry net = +32); ruff check src/ tests/ clean; SUMMARY.md written at `.planning/phases/03-playwright-fallback-credential-workflow/03-02-SUMMARY.md`. PlaywrightAdapter dispatch path proven: `CompanyConfig(name='anthropic', url='https://www.anthropic.com/careers')` → `PlaywrightAdapter`; specific-adapter precedence preserved (Greenhouse URL still → GreenhouseAdapter). ADP-09 + ADP-10 closed. ADP-14/15 open-closed re-proven a fifth time: zero edits to any of src/adapters/{greenhouse,lever,ashby,smartrecruiters,workday,apple}.py.
+**Stopped at:** Plan 03-02 execute-complete — PlaywrightAdapter wired in as catch-all LAST; ready for Plan 03-03 (credential workflow + CLAUDE.md Adding-a-Company section)
+**Resume file:** `.planning/phases/03-playwright-fallback-credential-workflow/03-02-SUMMARY.md` (Phase 3 Wave 2 done; next is Wave 3 = credential workflow)
 
 **Plan 01-01 Deliverables (Wave 1):**
 
@@ -218,3 +230,4 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 *Plan 02-02 complete: 2026-06-08 — Workday adapter (ADP-07); 249 tests; ADP-14/15 open-closed re-proven with 5 adapters; D-01 URL auto-parse + D-04 pagination with 25-page cap + sort-monotonicity + 3-form postedOn resolver + realistic User-Agent (Pitfall 5).*
 *Plan 02-03 complete: 2026-06-08 — Apple adapter (ADP-08) + JD-scan (FILT-03) + D-02 is_early_career simplification + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough; 298 tests; Phase 2 execute-complete (all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03); ADP-14/15 open-closed re-proven across all 3 Phase 2 plans with 6 adapters.*
 *Plan 03-01 complete: 2026-06-08 — URL redirect resolver (src/url_resolver.py per CONTEXT.md D-01b) + CompanyConfig.resolved_url field + registry dispatch update + orchestrator wiring with defense-in-depth + workflow YAML Chromium install/cache step + .gitignore trace-output paths; 316 tests (+18 new: 8 url_resolver + 2 models + 3 registry + 2 orchestrator + 3 workflow_yaml); ADP-09 infrastructure prerequisite closed; ADP-14/15 open-closed re-proven a fourth time (zero edits to src/adapters/*); foundation for Plan 03-02 PlaywrightAdapter ready.*
+*Plan 03-02 complete: 2026-06-08 — PlaywrightAdapter (`src/adapters/playwright_fallback.py`, ADP-09 + ADP-10) — XHR-intercept-first via `page.expect_response` + DOM-selector fallback via `wait_for_selector` + selectolax + playwright-stealth on by default (D-04) + 60s navigation timeout (D-05) + trace=off in production with `SCRAPER_DEBUG_TRACE=1` escape hatch (D-06) + `pw:<host>:<id>` dedup keys with `sha256(url)[:16]` fallback (Pitfall 9); registry appends as catch-all LAST (D-01c — 7 adapters total); normalizer dispatches via `_normalize_playwright` (coalesces postingDate/postedAt/created_at/publishedAt date keys; canonicalizes URL; FILT-03 JD-scan via `_read_playwright_description`); 348 cumulative tests (+32 net: 22 adapter + 5 normalizer + 5 registry; 2 NoAdapterFound assertions rewritten as PlaywrightAdapter dispatch); ADP-14/15 open-closed re-proven a fifth time (zero edits to existing 6 src/adapters/*.py files); SEC-03 enforced (zero `traceback.format_exc` references in adapter); ADP-09 + ADP-10 closed.*
