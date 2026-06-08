@@ -18,6 +18,7 @@ import re
 from datetime import UTC, datetime
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
+from src.filter import extract_experience_range
 from src.models import Posting, RawPosting
 
 # NORM-06 — tracking-param prefixes / exact names to strip during canonicalization.
@@ -71,6 +72,58 @@ def _parse_iso_to_utc(value: str | None) -> datetime | None:
     return dt
 
 
+# ----- FILT-03 JD-scan: per-adapter description readers. -----
+# Each adapter's response uses a different key path for the job-description
+# text. These helpers know where to look. Output is passed to
+# extract_experience_range() in src/filter.py. Per CONTEXT.md D-02, the
+# output is display-only — it populates Posting.experience_min/max but
+# does NOT gate inclusion (is_early_career in src/filter.py is title-only).
+
+
+def _read_greenhouse_description(raw: dict) -> str:
+    """Greenhouse `content` is HTML; JD-scan regexes handle either form."""
+    return raw.get("content") or ""
+
+
+def _read_lever_description(raw: dict) -> str:
+    """Lever exposes `descriptionPlain` (preferred) and `description` (HTML)."""
+    return raw.get("descriptionPlain") or raw.get("description") or ""
+
+
+def _read_ashby_description(raw: dict) -> str:
+    """Ashby exposes `descriptionPlain` (preferred) and `descriptionHtml`."""
+    return raw.get("descriptionPlain") or raw.get("descriptionHtml") or ""
+
+
+def _read_smartrecruiters_description(raw: dict) -> str:
+    """SR nests description deep: jobAd.sections.jobDescription.text."""
+    job_ad = raw.get("jobAd") or {}
+    if not isinstance(job_ad, dict):
+        return ""
+    sections = job_ad.get("sections") or {}
+    if not isinstance(sections, dict):
+        return ""
+    jd = sections.get("jobDescription") or {}
+    if not isinstance(jd, dict):
+        return ""
+    return jd.get("text") or ""
+
+
+def _read_workday_description(raw: dict) -> str:
+    """Workday CXS /jobs endpoint does NOT return description text per posting.
+
+    The adapter can stash description in `__description` if a future enhancement
+    fetches the per-posting detail page; until then this returns empty string
+    and JD-scan yields (None, None) for Workday postings.
+    """
+    return raw.get("__description") or ""
+
+
+def _read_apple_description(raw: dict) -> str:
+    """Apple exposes `jobSummary` (newer) or `postingDescription` (older)."""
+    return raw.get("jobSummary") or raw.get("postingDescription") or ""
+
+
 def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
     """Lever-specific normalization (ADP-04).
 
@@ -97,6 +150,9 @@ def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
     else:
         posted_date = None
 
+    # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
+    exp_min, exp_max = extract_experience_range(_read_lever_description(raw))
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -107,8 +163,8 @@ def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
         title=title,
         location=location,
         salary=None,
-        experience_min=None,
-        experience_max=None,
+        experience_min=exp_min,
+        experience_max=exp_max,
         posting_url=posting_url,
         posted_date=posted_date,
         first_seen=run_started_at,
@@ -139,6 +195,9 @@ def _normalize_ashby(rp: RawPosting, run_started_at: datetime) -> Posting:
     posting_url = canonicalize_url(raw.get("jobUrl") or "")
     posted_date = _parse_iso_to_utc(raw.get("publishedAt"))
 
+    # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
+    exp_min, exp_max = extract_experience_range(_read_ashby_description(raw))
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -149,8 +208,8 @@ def _normalize_ashby(rp: RawPosting, run_started_at: datetime) -> Posting:
         title=title,
         location=location,
         salary=None,
-        experience_min=None,
-        experience_max=None,
+        experience_min=exp_min,
+        experience_max=exp_max,
         posting_url=posting_url,
         posted_date=posted_date,
         first_seen=run_started_at,
@@ -195,6 +254,11 @@ def _normalize_smartrecruiters(rp: RawPosting, run_started_at: datetime) -> Post
 
     posted_date = _parse_iso_to_utc(raw.get("releasedDate"))
 
+    # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
+    exp_min, exp_max = extract_experience_range(
+        _read_smartrecruiters_description(raw),
+    )
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -205,8 +269,8 @@ def _normalize_smartrecruiters(rp: RawPosting, run_started_at: datetime) -> Post
         title=title,
         location=location,
         salary=None,
-        experience_min=None,
-        experience_max=None,
+        experience_min=exp_min,
+        experience_max=exp_max,
         posting_url=posting_url,
         posted_date=posted_date,
         first_seen=run_started_at,
@@ -245,6 +309,13 @@ def _normalize_workday(rp: RawPosting, run_started_at: datetime) -> Posting:
     if isinstance(posted_date, str):
         posted_date = _parse_iso_to_utc(posted_date)
 
+    # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
+    # Workday CXS /jobs endpoint doesn't return description text per-posting,
+    # so this is usually empty string → (None, None). The hook is wired so
+    # a future enhancement that stashes raw["__description"] (e.g., from a
+    # per-posting detail fetch) starts populating Experience automatically.
+    exp_min, exp_max = extract_experience_range(_read_workday_description(raw))
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -255,8 +326,8 @@ def _normalize_workday(rp: RawPosting, run_started_at: datetime) -> Posting:
         title=title,
         location=location,
         salary=None,
-        experience_min=None,
-        experience_max=None,
+        experience_min=exp_min,
+        experience_max=exp_max,
         posting_url=posting_url,
         posted_date=posted_date,
         first_seen=run_started_at,
@@ -280,6 +351,15 @@ def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
     posting_url = canonicalize_url(raw.get("absolute_url") or "")
     posted_date = _parse_iso_to_utc(raw.get("updated_at"))
 
+    # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
+    # Greenhouse `content` is HTML; the JD-scan regex bounds at 5000 chars
+    # and matches on plaintext substrings inside HTML tags fine (years/range
+    # patterns are anchored on \b word boundaries — HTML angle brackets won't
+    # interfere).
+    exp_min, exp_max = extract_experience_range(
+        _read_greenhouse_description(raw),
+    )
+
     company = rp.source_company
     # Cosmetic: title-case if the board token came in lowercase ("stripe" -> "Stripe").
     if company.islower():
@@ -291,8 +371,8 @@ def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
         title=title,
         location=location,
         salary=None,
-        experience_min=None,
-        experience_max=None,
+        experience_min=exp_min,
+        experience_max=exp_max,
         posting_url=posting_url,
         posted_date=posted_date,
         first_seen=run_started_at,
@@ -365,6 +445,9 @@ def _normalize_apple(rp: RawPosting, run_started_at: datetime) -> Posting:
     posted_raw = raw.get("postingDate") or raw.get("postDateInGMT")
     posted_date = _parse_iso_to_utc(posted_raw)
 
+    # FILT-03 JD-scan (CONTEXT.md D-02 — display-only; never gates inclusion).
+    exp_min, exp_max = extract_experience_range(_read_apple_description(raw))
+
     company = rp.source_company
     if company.islower():
         company = company.capitalize()
@@ -375,8 +458,8 @@ def _normalize_apple(rp: RawPosting, run_started_at: datetime) -> Posting:
         title=title,
         location=location,
         salary=None,
-        experience_min=None,
-        experience_max=None,
+        experience_min=exp_min,
+        experience_max=exp_max,
         posting_url=posting_url,
         posted_date=posted_date,
         first_seen=run_started_at,

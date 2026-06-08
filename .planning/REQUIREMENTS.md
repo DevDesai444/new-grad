@@ -38,7 +38,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **ADP-05**: Ashby adapter — fetches `api.ashbyhq.com/posting-api/job-board/<org>`, stable key `ashby:<org>:<uuid>`
 - [x] **ADP-06**: SmartRecruiters adapter — fetches `api.smartrecruiters.com/v1/companies/<co>/postings`, stable key `sr:<co>:<id>`
 - [x] **ADP-07**: Workday adapter — POSTs to `<tenant>.wd<N>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs` with pagination, stable key `wd:<tenant>:<id>`, handles epoch-ms dates
-- [ ] **ADP-08**: Apple Jobs adapter — POSTs to `jobs.apple.com/api/role/search`, stable key `apple:<id>`
+- [x] **ADP-08**: Apple Jobs adapter — POSTs to `jobs.apple.com/api/role/search`, stable key `apple:<id>`
 - [ ] **ADP-09**: Playwright fallback adapter — uses Chromium with `wait_for_selector` or `expect_response` interception, 20s per-page navigation timeout, post-render parse via selectolax
 - [ ] **ADP-10**: `playwright-stealth` is applied conditionally only on sites that demonstrably need it (per-site flag in registry)
 - [x] **ADP-11**: Each adapter raises typed errors: `SiteBlocked` (rate limit / IP block), `SchemaDrift` (pydantic validation failed), `PlaywrightTimeout`, or generic `Exception` — distinct from "zero results found"
@@ -51,8 +51,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **FILT-01**: Title-keyword filter includes: `new grad`, `new graduate`, `entry`, `entry-level`, `early career`, `early-career`, `junior`, `associate`, `university`, `recent graduate`, `class of 20XX`, and Roman/Arabic `I`/`1` level markers
 - [x] **FILT-02**: Title-keyword filter excludes: `senior`, `sr.`, `staff`, `principal`, `lead`, `manager`, `director`, `head of`, `II`, `III`, `IV`, `V`, levels `2`/`3`/`4`/`5`+
-- [ ] **FILT-03**: JD-text scan extracts experience range using regex patterns (`X+ years`, `X-Y years`, `0-N years`, `recent graduate`, `entry level`) and populates `experience_min` / `experience_max`
-- [x] **FILT-04**: A posting is kept if (title passes keyword gate) AND (extracted `experience_min ≤ 5` OR no experience range found)
+- [x] **FILT-03**: JD-text scan extracts experience range using regex patterns (`X+ years`, `X-Y years`, `0-N years`, `recent graduate`, `entry level`) and populates `experience_min` / `experience_max`
+- [x] ~~**FILT-04**~~: A posting is kept if (title passes keyword gate) AND (extracted `experience_min ≤ 5` OR no experience range found)  *[Softened per .planning/phases/02-ats-breadth-jd-scan/02-CONTEXT.md D-02: JD-scan is display-only; title gate alone decides inclusion. experience_min/max now populate the Experience column rather than gate the row.]*
 - [x] **FILT-05**: When the title is ambiguous (no included or excluded keywords) and JD-scan finds no experience signal, the posting is included (bias toward inclusion at this gate, so the table doesn't miss things)
 - [x] **FILT-06**: Filter logic is a pure function with no I/O; covered by unit tests with representative title/description fixtures
 
@@ -175,7 +175,7 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | ADP-05 | Phase 2 | Complete |
 | ADP-06 | Phase 2 | Complete |
 | ADP-07 | Phase 2 | Complete |
-| ADP-08 | Phase 2 | Pending |
+| ADP-08 | Phase 2 | Complete |
 | ADP-09 | Phase 3 | Pending |
 | ADP-10 | Phase 3 | Pending |
 | ADP-11 | Phase 1 | Complete |
@@ -185,7 +185,7 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | ADP-15 | Phase 1 | Complete |
 | FILT-01 | Phase 1 | Complete |
 | FILT-02 | Phase 1 | Complete |
-| FILT-03 | Phase 2 | Pending |
+| FILT-03 | Phase 2 | Complete |
 | FILT-04 | Phase 1 | Complete |
 | FILT-05 | Phase 1 | Complete |
 | FILT-06 | Phase 1 | Complete |
