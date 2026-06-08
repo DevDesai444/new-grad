@@ -88,7 +88,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **OUT-06**: Table is sorted by `posted_date` descending (most recent first), then by company name ascending; sort is stable across runs given identical input
 - [x] **OUT-07**: Renderer is a pure function — given identical input it produces byte-identical output (idempotent)
 - [x] **OUT-08**: Render runs even when zero postings exist — the section between sentinels then contains a "(no matching postings yet)" placeholder
-- [ ] **OUT-09**: A per-source health footer below the table shows `Company | Last seen | Status (ok/blocked/schema-drift/error)` for passive observability without notifications
+- [x] ~~**OUT-09**~~: ~~A per-source health footer below the table shows `Company | Last seen | Status (ok/blocked/schema-drift/error)` for passive observability without notifications~~  *[Softened per .planning/phases/04-extraction-polish-health-observability/04-CONTEXT.md D-04c: Source Health data IS tracked per-run in `seen.json.source_health` (status enum: `ok` / `blocked` / `schema-drift` / `error`, plus `last_attempt_utc` / `last_success_utc` / `consecutive_failures`), but is **NOT rendered in the README**. Future Claude CLI sessions consume the data directly by reading `seen.json.source_health` when the user mentions a missing company.]*
 
 ### Credentials & Secrets (SEC)
 
@@ -214,7 +214,7 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | OUT-06 | Phase 1 | Complete |
 | OUT-07 | Phase 1 | Complete |
 | OUT-08 | Phase 1 | Complete |
-| OUT-09 | Phase 4 | Pending |
+| OUT-09 | Phase 4 | Complete |
 | SEC-01 | Phase 3 | Complete |
 | SEC-02 | Phase 3 | Complete |
 | SEC-03 | Phase 1 | Complete |

@@ -36,7 +36,7 @@ from src.models import CompanyConfig, Posting
 from src.normalizer import normalize
 from src.registry import NoAdapterFound, get_adapter
 from src.renderer import write_readme
-from src.state_merger import merge_state
+from src.state_merger import merge_state, update_source_health
 from src.state_store import (
     SanityGateAborted,
     UnknownSchemaVersion,
@@ -267,6 +267,19 @@ def main(
         )
 
     merged = merge_state(prior, all_fresh, run_started_at)
+
+    # Phase 4 Plan 04-03 — D-04 / D-04d: per-company source_health update.
+    # Runs BEFORE sanity_gate so the in-memory state reflects this run's
+    # attempts. If sanity_gate aborts, the state is intentionally NOT written
+    # (T-03-02), so the source_health snapshot is also discarded — that's
+    # correct: a sanity-aborted run intentionally writes nothing. Outcomes for
+    # every company in companies.txt are recorded; classify_outcome handles
+    # the "no-adapter" / "blocked" / "error: <Cls>" / "ok" enum mapping.
+    # Per CONTEXT.md D-04c, this data is persisted in seen.json ONLY and is
+    # NOT rendered in the README — the renderer is intentionally not modified.
+    for company in companies:
+        outcome = outcomes.get(company.name, "no-adapter")
+        update_source_health(merged, company.name, outcome, run_started_at)
 
     # STATE-06 / D-06 — sanity gate before any disk write.
     # "new_count" for the gate is the count of postings that are still_listed=True
