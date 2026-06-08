@@ -55,6 +55,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] ~~**FILT-04**~~: A posting is kept if (title passes keyword gate) AND (extracted `experience_min ≤ 5` OR no experience range found)  *[Softened per .planning/phases/02-ats-breadth-jd-scan/02-CONTEXT.md D-02: JD-scan is display-only; title gate alone decides inclusion. experience_min/max now populate the Experience column rather than gate the row.]*
 - [x] **FILT-05**: When the title is ambiguous (no included or excluded keywords) and JD-scan finds no experience signal, the posting is included (bias toward inclusion at this gate, so the table doesn't miss things)
 - [x] **FILT-06**: Filter logic is a pure function with no I/O; covered by unit tests with representative title/description fixtures
+- [x] **FILT-07**: Postings whose location is classified as non-US by `is_us_location()` (`src/locations.py`) are dropped before the renderer. Ambiguous or empty locations are kept (bias toward inclusion per FILT-05). The filter runs AFTER `is_early_career()` (title-keyword gate) and BEFORE state merge. Postings dropped by FILT-07 are never stored in `seen.json` and never appear in the README; postings already in `seen.json` from prior runs (before FILT-07 shipped) are not retroactively removed (STATE-04's "never delete" rule wins). *[Added in Phase 4 per .planning/phases/04-extraction-polish-health-observability/04-CONTEXT.md D-03; reverses PROJECT.md's prior "US-only region filter" out-of-scope listing.]*
 
 ### Normalization & Extraction (NORM)
 
@@ -189,6 +190,7 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | FILT-04 | Phase 1 | Complete |
 | FILT-05 | Phase 1 | Complete |
 | FILT-06 | Phase 1 | Complete |
+| FILT-07 | Phase 4 | Complete |
 | NORM-01 | Phase 1 | Complete |
 | NORM-02 | Phase 4 | Complete (Plan 04-01) |
 | NORM-03 | Phase 4 | Complete (Plan 04-01) |
@@ -225,9 +227,9 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | RUN-04 | Phase 1 | Complete |
 
 **Coverage:**
-- v1 requirements: 71 total (10 INFRA + 6 CFG + 15 ADP + 6 FILT + 7 NORM + 8 STATE + 9 OUT + 6 SEC + 4 RUN)
-- Mapped to phases: 71/71 ✓ (no orphans, no double-maps)
-- Per-phase distribution: Phase 1 = 58, Phase 2 = 6, Phase 3 = 6, Phase 4 = 3 (note: Phase 1 is foundation-heavy by design — all infra, state, basic adapter contract, basic filter, basic render, and run lifecycle land here so the walking skeleton is end-to-end on day one; subsequent phases add ATS breadth, JS fallback + credentials, and extraction polish)
+- v1 requirements: 72 total (10 INFRA + 6 CFG + 15 ADP + 7 FILT + 7 NORM + 8 STATE + 9 OUT + 6 SEC + 4 RUN)
+- Mapped to phases: 72/72 ✓ (no orphans, no double-maps)
+- Per-phase distribution: Phase 1 = 58, Phase 2 = 6, Phase 3 = 6, Phase 4 = 4 (note: Phase 1 is foundation-heavy by design — all infra, state, basic adapter contract, basic filter, basic render, and run lifecycle land here so the walking skeleton is end-to-end on day one; subsequent phases add ATS breadth, JS fallback + credentials, and extraction polish)
 - Unmapped: 0 ✓
 
 ---
