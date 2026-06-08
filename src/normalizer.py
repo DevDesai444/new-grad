@@ -70,6 +70,53 @@ def _parse_iso_to_utc(value: str | None) -> datetime | None:
     return dt
 
 
+def _normalize_lever(rp: RawPosting, run_started_at: datetime) -> Posting:
+    """Lever-specific normalization (ADP-04).
+
+    Per <adapter_specifications> in 02-01-PLAN.md:
+      title:        raw["text"]
+      location:     raw["categories"]["location"]
+      posting_url:  canonicalize_url(raw["hostedUrl"])
+      posted_date:  raw["createdAt"] (epoch ms) → UTC datetime
+    """
+    raw = rp.raw
+    dedup_key = raw["__dedup_key"]
+    title = (raw.get("text") or "").strip()
+    categories = raw.get("categories") or {}
+    location = (
+        (categories.get("location") or "").strip()
+        if isinstance(categories, dict)
+        else ""
+    )
+    posting_url = canonicalize_url(raw.get("hostedUrl") or "")
+    # Lever createdAt is epoch milliseconds (int). Convert to UTC datetime.
+    created_ms = raw.get("createdAt")
+    if isinstance(created_ms, (int, float)) and created_ms > 0:
+        posted_date = datetime.fromtimestamp(created_ms / 1000.0, tz=UTC)
+    else:
+        posted_date = None
+
+    company = rp.source_company
+    if company.islower():
+        company = company.capitalize()
+
+    return Posting(
+        dedup_key=dedup_key,
+        company=company,
+        title=title,
+        location=location,
+        salary=None,
+        experience_min=None,
+        experience_max=None,
+        posting_url=posting_url,
+        posted_date=posted_date,
+        first_seen=run_started_at,
+        last_seen=run_started_at,
+        still_listed=True,
+        source_adapter=rp.source_adapter,
+    )
+
+
 def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
     """Greenhouse-specific normalization.
 
@@ -108,6 +155,7 @@ def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
 
 _DISPATCH = {
     "greenhouse": _normalize_greenhouse,
+    "lever": _normalize_lever,
 }
 
 

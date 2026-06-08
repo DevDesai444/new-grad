@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from src.adapters.base import Adapter
 from src.adapters.greenhouse import GreenhouseAdapter
+from src.adapters.lever import LeverAdapter
 from src.models import CompanyConfig
 
 
@@ -24,11 +25,13 @@ class NoAdapterFound(Exception):
 
 
 # ADAPTERS is the ONLY list to mutate when adding a new ATS.
-# Phase 2 will append: LeverAdapter, AshbyAdapter, SmartRecruitersAdapter,
-#                     WorkdayAdapter, AppleAdapter
+# Phase 2 Plan 02-01: LeverAdapter, AshbyAdapter, SmartRecruitersAdapter
+# Phase 2 Plan 02-02: WorkdayAdapter
+# Phase 2 Plan 02-03: AppleAdapter
 # Phase 3 will append: PlaywrightAdapter (always last — catch-all)
 ADAPTERS: list[type[Adapter]] = [
     GreenhouseAdapter,
+    LeverAdapter,
 ]
 
 

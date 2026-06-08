@@ -1,0 +1,26 @@
+[
+  {
+    "id": "11111111-aaaa-bbbb-cccc-222222222222",
+    "text": "Software Engineer, New Grad",
+    "createdAt": 1748707200000,
+    "categories": {"location": "San Francisco, CA", "team": "Eng", "department": "Engineering"},
+    "hostedUrl": "https://jobs.lever.co/notion/11111111-aaaa-bbbb-cccc-222222222222",
+    "descriptionPlain": "Join our team as a new grad SWE. 0-2 years experience preferred."
+  },
+  {
+    "id": "33333333-aaaa-bbbb-cccc-444444444444",
+    "text": "Senior Software Engineer, Infrastructure",
+    "createdAt": 1748620800000,
+    "categories": {"location": "Remote", "team": "Infra", "department": "Engineering"},
+    "hostedUrl": "https://jobs.lever.co/notion/33333333-aaaa-bbbb-cccc-444444444444?lever-source=careers",
+    "descriptionPlain": "10+ years of experience required."
+  },
+  {
+    "id": "55555555-aaaa-bbbb-cccc-666666666666",
+    "text": "Associate Software Engineer",
+    "createdAt": 1748793600000,
+    "categories": {"location": "New York, NY", "team": "Product", "department": "Engineering"},
+    "hostedUrl": "https://jobs.lever.co/notion/55555555-aaaa-bbbb-cccc-666666666666",
+    "descriptionPlain": "0-3 years of experience. Entry-level role for new graduates."
+  }
+]
