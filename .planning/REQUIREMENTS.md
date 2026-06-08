@@ -9,16 +9,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure (INFRA)
 
-- [ ] **INFRA-01**: System runs as a GitHub Actions cron job scheduled hourly (`0 * * * *`) with `timeout-minutes: 50`
-- [ ] **INFRA-02**: Workflow declares `permissions: contents: write` and `concurrency: { group: scan, cancel-in-progress: false }` so runs serialize and pushes succeed
-- [ ] **INFRA-03**: Python 3.12 environment installed via `uv` with `actions/setup-python@v5` and dependency caching on `requirements.lock`
-- [ ] **INFRA-04**: Playwright Chromium browser cache restored via `actions/cache@v4` keyed on dep lockfile (avoids 60–90s cold install per run)
+- [x] **INFRA-01**: System runs as a GitHub Actions cron job scheduled hourly (`0 * * * *`) with `timeout-minutes: 50`
+- [x] **INFRA-02**: Workflow declares `permissions: contents: write` and `concurrency: { group: scan, cancel-in-progress: false }` so runs serialize and pushes succeed
+- [x] **INFRA-03**: Python 3.12 environment installed via `uv` with `actions/setup-python@v5` and dependency caching on `requirements.lock`
+- [x] **INFRA-04**: Playwright Chromium browser cache restored via `actions/cache@v4` keyed on dep lockfile (avoids 60–90s cold install per run)
 - [ ] **INFRA-05**: `health.json` is updated every run (including failed runs) so the workflow always produces ≥1 commit candidate per run — prevents GitHub's 60-day schedule auto-disable
-- [ ] **INFRA-06**: Repo is public, owned by `github.com/DevDesai444`, named `new-grad`
-- [ ] **INFRA-07**: `.gitignore` blocks `.env`, `*.har`, `trace.zip`, `cookies.json`, `__pycache__/`, `.pytest_cache/`, `seen.json.tmp`, `seen.json.bak`
+- [x] **INFRA-06**: Repo is public, owned by `github.com/DevDesai444`, named `new-grad`
+- [x] **INFRA-07**: `.gitignore` blocks `.env`, `*.har`, `trace.zip`, `cookies.json`, `__pycache__/`, `.pytest_cache/`, `seen.json.tmp`, `seen.json.bak`
 - [ ] **INFRA-08**: GitHub repo secret scanning + push protection enabled in repo settings (documented in README setup)
-- [ ] **INFRA-09**: Any per-site credentials (rare) are stored only in GitHub Actions Secrets, read via `os.environ[...]`, never committed
-- [ ] **INFRA-10**: Commits and pushes use `stefanzweifel/git-auto-commit-action@v5` with `GITHUB_TOKEN`; no PAT required
+- [x] **INFRA-09**: Any per-site credentials (rare) are stored only in GitHub Actions Secrets, read via `os.environ[...]`, never committed
+- [x] **INFRA-10**: Commits and pushes use `stefanzweifel/git-auto-commit-action@v5` with `GITHUB_TOKEN`; no PAT required
 
 ### Configuration (CFG)
 
@@ -31,9 +31,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Scraping Adapters (ADP)
 
-- [ ] **ADP-01**: An `Adapter` ABC with `matches(url) -> bool` and `fetch(company) -> list[RawPosting]` defines the per-source contract
+- [x] **ADP-01**: An `Adapter` ABC with `matches(url) -> bool` and `fetch(company) -> list[RawPosting]` defines the per-source contract
 - [ ] **ADP-02**: A URL-pattern registry dispatches each `companies.txt` entry to the right adapter; Playwright is the catch-all when nothing else matches
-- [ ] **ADP-03**: Greenhouse adapter — fetches `boards-api.greenhouse.io/v1/boards/<token>/jobs?content=true`, validates response via pydantic v2, emits stable key `gh:<company>:<id>`
+- [x] **ADP-03**: Greenhouse adapter — fetches `boards-api.greenhouse.io/v1/boards/<token>/jobs?content=true`, validates response via pydantic v2, emits stable key `gh:<company>:<id>`
 - [ ] **ADP-04**: Lever adapter — fetches `api.lever.co/v0/postings/<company>?mode=json`, stable key `lever:<company>:<uuid>`
 - [ ] **ADP-05**: Ashby adapter — fetches `api.ashbyhq.com/posting-api/job-board/<org>`, stable key `ashby:<org>:<uuid>`
 - [ ] **ADP-06**: SmartRecruiters adapter — fetches `api.smartrecruiters.com/v1/companies/<co>/postings`, stable key `sr:<co>:<id>`
@@ -41,9 +41,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **ADP-08**: Apple Jobs adapter — POSTs to `jobs.apple.com/api/role/search`, stable key `apple:<id>`
 - [ ] **ADP-09**: Playwright fallback adapter — uses Chromium with `wait_for_selector` or `expect_response` interception, 20s per-page navigation timeout, post-render parse via selectolax
 - [ ] **ADP-10**: `playwright-stealth` is applied conditionally only on sites that demonstrably need it (per-site flag in registry)
-- [ ] **ADP-11**: Each adapter raises typed errors: `SiteBlocked` (rate limit / IP block), `SchemaDrift` (pydantic validation failed), `PlaywrightTimeout`, or generic `Exception` — distinct from "zero results found"
+- [x] **ADP-11**: Each adapter raises typed errors: `SiteBlocked` (rate limit / IP block), `SchemaDrift` (pydantic validation failed), `PlaywrightTimeout`, or generic `Exception` — distinct from "zero results found"
 - [ ] **ADP-12**: One company's adapter failure is caught by the orchestrator and does not abort the run for the other companies
-- [ ] **ADP-13**: Per-adapter unit tests run against recorded JSON fixtures in `tests/fixtures/` via `respx` for HTTP mocking
+- [x] **ADP-13**: Per-adapter unit tests run against recorded JSON fixtures in `tests/fixtures/` via `respx` for HTTP mocking
 - [ ] **ADP-14**: When the user adds a career URL that no existing adapter recognizes, Claude creates a new adapter file `src/adapters/<name>.py` implementing the `Adapter` ABC and registers it. Existing adapter files MUST NOT be modified for this to land (Open/Closed). The new adapter is covered by at least one unit test using a recorded fixture before it ships.
 - [ ] **ADP-15**: Adapter additions are reversible — removing or disabling one adapter file (and its registry line) must not break any other adapter or the orchestrator
 
@@ -58,7 +58,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Normalization & Extraction (NORM)
 
-- [ ] **NORM-01**: A canonical `Posting` model includes: `dedup_key`, `company`, `title`, `location`, `salary`, `experience_min`, `experience_max`, `posting_url`, `posted_date`, `first_seen`, `last_seen`, `still_listed`, `source_adapter`
+- [x] **NORM-01**: A canonical `Posting` model includes: `dedup_key`, `company`, `title`, `location`, `salary`, `experience_min`, `experience_max`, `posting_url`, `posted_date`, `first_seen`, `last_seen`, `still_listed`, `source_adapter`
 - [ ] **NORM-02**: Salary extraction recognizes range (`$X–$Y`), ceiling (`up to $X`), hourly (`$X/hr`), and currency-prefixed formats; unparseable salary renders as `—`
 - [ ] **NORM-03**: Location normalization collapses `Remote, United States` / `Remote — US` / `Remote (USA)` to a consistent `Remote (US)` form
 - [ ] **NORM-04**: Posted date is extracted from the source adapter when exposed; missing dates leave `posted_date` null
@@ -93,16 +93,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **SEC-01**: When adding a company whose career site requires login to scrape useful results, Claude inline-prompts the user for email + password (and any other credential the site needs), receives them in the chat, and stores them via `gh secret set <NAME> --repo DevDesai444/new-grad` — the user does no manual repo-config work
 - [ ] **SEC-02**: Secret naming convention: `SCRAPER_<COMPANY>_EMAIL` and `SCRAPER_<COMPANY>_PASSWORD` (or similar typed names per credential kind); the secret name is referenced in the adapter via `os.environ[<NAME>]`
-- [ ] **SEC-03**: Credentials are NEVER written to: `companies.txt`, the repo, any committed file, any local file outside of `gh` CLI internals, the chat history (echoed back), or workflow logs
+- [x] **SEC-03**: Credentials are NEVER written to: `companies.txt`, the repo, any committed file, any local file outside of `gh` CLI internals, the chat history (echoed back), or workflow logs
 - [ ] **SEC-04**: After storing a secret, Claude confirms by listing `gh secret list --repo DevDesai444/new-grad` (which shows names only, not values) — never by echoing the value
-- [ ] **SEC-05**: Adapter code that reads credentials raises a typed `MissingCredential` error if the env var is unset on a production run; this is logged and isolated per company (other companies in the same run still scan)
+- [x] **SEC-05**: Adapter code that reads credentials raises a typed `MissingCredential` error if the env var is unset on a production run; this is logged and isolated per company (other companies in the same run still scan)
 - [ ] **SEC-06**: README documents which secret names are referenced by which adapter so the user can audit / rotate / delete them via `gh secret` later
 
 ### Run Lifecycle & Commit (RUN)
 
 - [ ] **RUN-01**: A single `run_started_at` UTC timestamp is captured at orchestrator start and threaded through all downstream components — no other component calls `datetime.now()`
 - [ ] **RUN-02**: Run summary is printed to the GitHub Actions step summary: counts of `+N new`, `M closed`, `K total open`, and per-source outcomes
-- [ ] **RUN-03**: The auto-commit step skips when no files changed (no-op runs do not push)
+- [x] **RUN-03**: The auto-commit step skips when no files changed (no-op runs do not push)
 - [ ] **RUN-04**: Commit message is informative: `chore(scan): +N new (Apple, Stripe), M closed (Anthropic)` when there are changes, else not committed at all
 
 ### Out of Scope (carried from PROJECT.md)
@@ -152,25 +152,25 @@ Which phases cover which requirements. Filled in by the roadmapper.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
-| INFRA-04 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 1 | Complete |
+| INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Pending |
-| INFRA-06 | Phase 1 | Pending |
-| INFRA-07 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Complete |
+| INFRA-07 | Phase 1 | Complete |
 | INFRA-08 | Phase 1 | Pending |
-| INFRA-09 | Phase 1 | Pending |
-| INFRA-10 | Phase 1 | Pending |
+| INFRA-09 | Phase 1 | Complete |
+| INFRA-10 | Phase 1 | Complete |
 | CFG-01 | Phase 1 | Pending |
 | CFG-02 | Phase 1 | Pending |
 | CFG-03 | Phase 1 | Pending |
 | CFG-04 | Phase 1 | Pending |
 | CFG-05 | Phase 1 | Pending |
 | CFG-06 | Phase 1 | Pending |
-| ADP-01 | Phase 1 | Pending |
+| ADP-01 | Phase 1 | Complete |
 | ADP-02 | Phase 1 | Pending |
-| ADP-03 | Phase 1 | Pending |
+| ADP-03 | Phase 1 | Complete |
 | ADP-04 | Phase 2 | Pending |
 | ADP-05 | Phase 2 | Pending |
 | ADP-06 | Phase 2 | Pending |
@@ -178,9 +178,9 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | ADP-08 | Phase 2 | Pending |
 | ADP-09 | Phase 3 | Pending |
 | ADP-10 | Phase 3 | Pending |
-| ADP-11 | Phase 1 | Pending |
+| ADP-11 | Phase 1 | Complete |
 | ADP-12 | Phase 1 | Pending |
-| ADP-13 | Phase 1 | Pending |
+| ADP-13 | Phase 1 | Complete |
 | ADP-14 | Phase 1 | Pending |
 | ADP-15 | Phase 1 | Pending |
 | FILT-01 | Phase 1 | Pending |
@@ -189,7 +189,7 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | FILT-04 | Phase 1 | Pending |
 | FILT-05 | Phase 1 | Pending |
 | FILT-06 | Phase 1 | Pending |
-| NORM-01 | Phase 1 | Pending |
+| NORM-01 | Phase 1 | Complete |
 | NORM-02 | Phase 4 | Pending |
 | NORM-03 | Phase 4 | Pending |
 | NORM-04 | Phase 1 | Pending |
@@ -215,13 +215,13 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | OUT-09 | Phase 4 | Pending |
 | SEC-01 | Phase 3 | Pending |
 | SEC-02 | Phase 3 | Pending |
-| SEC-03 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 3 | Pending |
-| SEC-05 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Complete |
 | SEC-06 | Phase 3 | Pending |
 | RUN-01 | Phase 1 | Pending |
 | RUN-02 | Phase 1 | Pending |
-| RUN-03 | Phase 1 | Pending |
+| RUN-03 | Phase 1 | Complete |
 | RUN-04 | Phase 1 | Pending |
 
 **Coverage:**
