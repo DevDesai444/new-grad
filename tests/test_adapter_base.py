@@ -8,6 +8,7 @@ import pytest
 
 from src.adapters.base import (
     Adapter,
+    InvalidCredential,
     MissingCredential,
     PlaywrightTimeout,
     SchemaDrift,
@@ -22,7 +23,13 @@ def test_adapter_is_abstract():
 
 @pytest.mark.parametrize(
     "exc_cls",
-    [SiteBlocked, SchemaDrift, PlaywrightTimeout, MissingCredential],
+    [
+        SiteBlocked,
+        SchemaDrift,
+        PlaywrightTimeout,
+        MissingCredential,
+        InvalidCredential,
+    ],
 )
 def test_typed_errors_inherit_from_exception(exc_cls):
     assert issubclass(exc_cls, Exception)
@@ -32,9 +39,30 @@ def test_typed_errors_inherit_from_exception(exc_cls):
 
 
 def test_typed_errors_are_distinct_classes():
-    # ADP-11 requires four distinct types so the orchestrator can route on them
-    classes = {SiteBlocked, SchemaDrift, PlaywrightTimeout, MissingCredential}
-    assert len(classes) == 4
+    # ADP-11 (+ Phase 3 Plan 03-03 InvalidCredential) — five distinct types so
+    # the orchestrator can route on them.
+    classes = {
+        SiteBlocked,
+        SchemaDrift,
+        PlaywrightTimeout,
+        MissingCredential,
+        InvalidCredential,
+    }
+    assert len(classes) == 5
+
+
+def test_invalid_credential_exists_and_subclasses_exception():
+    """Plan 03-03 — InvalidCredential is importable and a proper Exception subclass."""
+    assert issubclass(InvalidCredential, Exception)
+
+
+def test_invalid_credential_distinct_from_missing_credential():
+    """Plan 03-03 D-02c — InvalidCredential is distinct from MissingCredential
+    so the orchestrator can route on each (env-var unset vs login rejected).
+    """
+    assert InvalidCredential is not MissingCredential
+    assert not issubclass(InvalidCredential, MissingCredential)
+    assert not issubclass(MissingCredential, InvalidCredential)
 
 
 def test_adapter_subclass_must_implement_matches_and_fetch():

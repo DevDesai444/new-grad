@@ -10,7 +10,7 @@ from typing import ClassVar
 
 import orjson
 
-from src.adapters.base import Adapter, SiteBlocked
+from src.adapters.base import Adapter, InvalidCredential, SiteBlocked
 from src.models import CompanyConfig, RawPosting
 from src.state_store import SCHEMA_VERSION
 
@@ -349,6 +349,57 @@ def test_main_loop_calls_resolve_url_per_company(tmp_path, monkeypatch):
         "https://ok.example/co1",
         "https://careers.amd.com/",
     ]
+
+
+# --- Phase 3 Plan 03-03 — InvalidCredential per-company isolation (D-02c) ----
+
+
+class _InvalidCredentialAdapter(Adapter):
+    """Synthetic adapter that always raises InvalidCredential.
+
+    Plan 03-03 — the orchestrator's _scrape_one catch tuple is extended to
+    include InvalidCredential so a credential-rejection on one company never
+    aborts the rest of the run (ADP-12 per-company isolation preserved).
+    """
+
+    name: ClassVar[str] = "bad_creds"
+
+    @classmethod
+    def matches(cls, url):
+        return "bad-creds.example" in url
+
+    def fetch(self, company):
+        raise InvalidCredential(
+            f"Playwright {company.name}: login form still present after submit"
+        )
+
+
+def test_orchestrator_isolates_invalid_credential(tmp_path, monkeypatch):
+    """Plan 03-03 — one company raises InvalidCredential; the other still
+    produces a posting. Outcome for the failing company is `error: InvalidCredential`.
+    """
+    from src import main as main_mod
+    from src import registry as reg
+
+    monkeypatch.setattr(
+        reg, "ADAPTERS", [_OkAdapter, _InvalidCredentialAdapter]
+    )
+    cfg = _setup_companies(
+        tmp_path,
+        ("https://ok.example/co-ok", None),
+        ("https://bad-creds.example/co-bad", None),
+    )
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+    code = main_mod.main(cfg, state, readme)
+    # ADP-12 — credential failure of one company never causes non-zero exit.
+    assert code == 0
+    saved = orjson.loads(state.read_bytes())
+    keys = list(saved["postings"].keys())
+    # The OK company landed a posting.
+    assert any("co-ok" in k for k in keys), f"expected ok posting, got {keys}"
+    # The bad-creds company contributed nothing.
+    assert not any("co-bad" in k for k in keys)
 
 
 def test_main_loop_resolve_url_failure_continues_per_company_isolation(

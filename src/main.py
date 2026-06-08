@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from src.adapters.base import (
+    InvalidCredential,
     MissingCredential,
     PlaywrightTimeout,
     SchemaDrift,
@@ -61,7 +62,8 @@ def _scrape_one(
       "ok"           — fetch + normalize succeeded; postings may be empty.
       "blocked"      — SiteBlocked; orchestrator routes to any_blocked=True.
       "no-adapter"   — NoAdapterFound; CFG-05 skip path.
-      "error: <Cls>" — anything else (SchemaDrift, MissingCredential, generic).
+      "error: <Cls>" — anything else (SchemaDrift, MissingCredential,
+                       InvalidCredential, PlaywrightTimeout, generic).
 
     ADP-12 + Pitfall 17 — never re-raises; never logs request headers; never
     formats a full traceback (could leak Authorization headers or cookies).
@@ -80,7 +82,9 @@ def _scrape_one(
     except SiteBlocked as e:
         logger.warning("scrape:%s SiteBlocked: %s", company.name, e)
         return [], "blocked"
-    except (SchemaDrift, PlaywrightTimeout, MissingCredential) as e:
+    except (
+        SchemaDrift, PlaywrightTimeout, MissingCredential, InvalidCredential,
+    ) as e:
         logger.error("scrape:%s %s: %s", company.name, type(e).__name__, e)
         return [], f"error: {type(e).__name__}"
     except Exception as e:

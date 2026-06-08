@@ -58,6 +58,19 @@ class MissingCredential(Exception):
     """
 
 
+class InvalidCredential(Exception):
+    """Raised by Playwright adapter (Phase 3 Plan 03-03) when login credentials
+    are PRESENT in env vars (`SCRAPER_<COMPANY>_<KIND>`) but the login form
+    rejects them — heuristic: form still visible after submit + brief wait.
+    Distinct from MissingCredential (env var unset).
+
+    Per SEC-03 / Pitfall 17 / CONTEXT.md D-02c: exception message includes
+    COMPANY + URL only — NEVER credential values, NEVER response body, NEVER
+    request headers. Orchestrator's per-company isolation (ADP-12) catches
+    alongside MissingCredential and continues scanning other companies.
+    """
+
+
 class Adapter(ABC):
     """Abstract base for all scraping adapters.
 
