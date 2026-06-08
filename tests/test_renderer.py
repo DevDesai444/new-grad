@@ -371,3 +371,172 @@ def test_render_escapes_pipe_in_title(tmp_path):
     }
     out = render_readme(state, readme, _RUN)
     assert "Engineer \\| Junior" in out
+
+
+# --- Phase 4 Plan 04-01 — salary cell handling (D-01a + D-01b) ----------------
+# D-01a: empty / None / non-numeric placeholder strings render as '—'.
+# D-01b: salary cell truncated at 80 chars with ellipsis.
+
+from src.renderer import _coalesce_salary, _truncate_cell  # noqa: E402
+
+
+class TestCoalesceSalaryHelper:
+    """D-01a — unit tests for the pure _coalesce_salary helper."""
+
+    def test_none_to_em_dash(self):
+        assert _coalesce_salary(None) == "—"
+
+    def test_empty_to_em_dash(self):
+        assert _coalesce_salary("") == "—"
+
+    def test_whitespace_only_to_em_dash(self):
+        assert _coalesce_salary("   ") == "—"
+
+    @pytest.mark.parametrize(
+        "placeholder",
+        [
+            "competitive", "Competitive", "COMPETITIVE",
+            "doe", "DOE", "Doe",
+            "tbd", "TBD",
+            "not disclosed", "Not Disclosed",
+            "n/a", "N/A", "na", "NA",
+            "null", "Null",
+            "to be determined", "To Be Determined",
+            "negotiable", "Negotiable",
+            "depends on experience", "Depends On Experience",
+            "tbc", "TBC",
+            "—",
+        ],
+    )
+    def test_placeholder_strings_coalesce_to_em_dash(self, placeholder):
+        assert _coalesce_salary(placeholder) == "—"
+
+    def test_real_salary_passes_through(self):
+        assert _coalesce_salary("$120k") == "$120k"
+
+    def test_real_salary_range_passes_through(self):
+        assert _coalesce_salary("$120,000 - $160,000") == "$120,000 - $160,000"
+
+    def test_pound_sterling_passes_through(self):
+        assert _coalesce_salary("£60,000 - £80,000") == "£60,000 - £80,000"
+
+    def test_strips_whitespace_around_real_value(self):
+        assert _coalesce_salary("  $140K  ") == "$140K"
+
+
+class TestTruncateCellHelper:
+    """D-01b — 80-char cell truncation with ellipsis."""
+
+    def test_short_string_unchanged(self):
+        assert _truncate_cell("short") == "short"
+
+    def test_exactly_80_chars_unchanged(self):
+        s = "x" * 80
+        assert _truncate_cell(s) == s
+        assert len(_truncate_cell(s)) == 80
+
+    def test_81_chars_truncated_to_80_with_ellipsis(self):
+        s = "x" * 81
+        out = _truncate_cell(s)
+        assert len(out) == 80
+        assert out.endswith("…")
+
+    def test_100_chars_truncated_to_80_with_ellipsis(self):
+        s = "y" * 100
+        out = _truncate_cell(s)
+        assert len(out) == 80
+        assert out.endswith("…")
+
+    def test_custom_limit(self):
+        assert _truncate_cell("abcdefghij", limit=5) == "abcd…"
+
+
+class TestSalaryCellRendering:
+    """D-01a + D-01b — end-to-end render cell behavior."""
+
+    def _state_with_salary(self, salary):
+        return {
+            "schema_version": 1,
+            "last_run_utc": None,
+            "postings": {
+                "k": {
+                    "company": "X",
+                    "title": "T",
+                    "location": "SF",
+                    "salary": salary,
+                    "experience_min": None,
+                    "experience_max": None,
+                    "posting_url": "https://x/1",
+                    "posted_date": None,
+                    "first_seen": _RUN.isoformat(),
+                    "last_seen": _RUN.isoformat(),
+                    "still_listed": True,
+                    "source_adapter": "greenhouse",
+                },
+            },
+        }
+
+    def test_render_salary_empty_renders_em_dash(self, tmp_path):
+        readme = tmp_path / "README.md"
+        readme.write_text(f"{SENTINEL_BEGIN}\n\n{SENTINEL_END}")
+        out = render_readme(self._state_with_salary(""), readme, _RUN)
+        # Cell content shows "—" — assert it appears within the table row.
+        assert " | — | " in out
+
+    def test_render_salary_none_renders_em_dash(self, tmp_path):
+        readme = tmp_path / "README.md"
+        readme.write_text(f"{SENTINEL_BEGIN}\n\n{SENTINEL_END}")
+        out = render_readme(self._state_with_salary(None), readme, _RUN)
+        assert " | — | " in out
+
+    @pytest.mark.parametrize(
+        "placeholder",
+        ["Competitive", "DOE", "TBD", "Not disclosed", "Negotiable"],
+    )
+    def test_render_salary_placeholder_coalesces_to_em_dash(
+        self, tmp_path, placeholder,
+    ):
+        readme = tmp_path / "README.md"
+        readme.write_text(f"{SENTINEL_BEGIN}\n\n{SENTINEL_END}")
+        out = render_readme(self._state_with_salary(placeholder), readme, _RUN)
+        assert " | — | " in out
+        assert placeholder not in out
+
+    def test_render_salary_verbatim_passes_through(self, tmp_path):
+        readme = tmp_path / "README.md"
+        readme.write_text(f"{SENTINEL_BEGIN}\n\n{SENTINEL_END}")
+        out = render_readme(
+            self._state_with_salary("$120k–$160k"), readme, _RUN,
+        )
+        assert "$120k–$160k" in out
+
+    def test_render_salary_long_value_truncated_to_80_chars_with_ellipsis(
+        self, tmp_path,
+    ):
+        readme = tmp_path / "README.md"
+        readme.write_text(f"{SENTINEL_BEGIN}\n\n{SENTINEL_END}")
+        long_salary = "$" + "1" * 100  # 101 chars
+        out = render_readme(self._state_with_salary(long_salary), readme, _RUN)
+        # The rendered cell must contain a truncated form ending with the
+        # ellipsis character. Cell content sits between " | " delimiters.
+        # Find the salary cell substring.
+        # Each row is "| Company | Title | Location | <salary> | ..."
+        # Extract by splitting on " | " — the salary is at index 4.
+        rows = [line for line in out.splitlines() if line.startswith("| X |")]
+        assert rows, "expected at least one data row starting with '| X |'"
+        cells = rows[0].split(" | ")
+        salary_cell = cells[4]
+        assert salary_cell.endswith("…")
+        # The cell is <= 80 chars by D-01b.
+        assert len(salary_cell) <= 80
+
+    def test_render_salary_pipe_in_value_is_escaped_after_coalesce(
+        self, tmp_path,
+    ):
+        """A real salary like '$100k | bonus' should escape the pipe."""
+        readme = tmp_path / "README.md"
+        readme.write_text(f"{SENTINEL_BEGIN}\n\n{SENTINEL_END}")
+        out = render_readme(
+            self._state_with_salary("$100k | bonus"), readme, _RUN,
+        )
+        assert "$100k \\| bonus" in out
