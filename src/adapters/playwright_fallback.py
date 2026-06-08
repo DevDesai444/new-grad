@@ -36,6 +36,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import time
 from collections.abc import Callable
 from typing import ClassVar
 from urllib.parse import urljoin, urlparse
@@ -65,6 +66,13 @@ _TRACE_DIR = ".playwright-trace"  # gitignored per Plan 03-01
 # XHR predicate keywords - adapter captures any /api/ response containing
 # any of these in its URL. Heuristic; refine per-site if needed.
 _XHR_KEYWORDS = ("jobs", "openings", "positions", "careers", "roles")
+
+# Minimum per-operation timeout (ms) used when the remaining budget falls
+# below this floor. Bug-A fix (2026-06-08): the adapter is deadline-bounded
+# overall, but Playwright sync ops reject `timeout=0` or sub-millisecond
+# values awkwardly — clamp every requested timeout to this minimum so an
+# almost-exhausted budget still raises a clean PlaywrightTimeoutError.
+_MIN_OP_TIMEOUT_MS = 100
 
 # DOM-fallback selectors - tried in order; first match wins.
 _DOM_SELECTORS = (
@@ -273,11 +281,39 @@ class PlaywrightAdapter(Adapter):
             timeout_s = float(hint_kw.get("timeout_s", _DEFAULT_TIMEOUT_S))
         except (ValueError, TypeError):
             timeout_s = _DEFAULT_TIMEOUT_S
-        timeout_ms = int(timeout_s * 1000)
 
         target_url = company.resolved_url or company.url
         host = (urlparse(target_url).hostname or "unknown").lower()
         trace_enabled = os.environ.get(_DEBUG_TRACE_ENV) == "1"  # D-06
+
+        # Bug-A fix (2026-06-08): deadline-based timeout budget.
+        #
+        # Previously every Playwright op (initial page.goto, expect_response,
+        # the goto inside it, DOM-fallback page.goto, and the per-selector
+        # wait_for_selector loop) received the FULL `timeout_ms`. On the
+        # worst path (XHR never fires AND no DOM selector matches) wall-clock
+        # stacked to 2-3x the declared timeout — production runs at 60s
+        # default were observed taking ~120s per site.
+        #
+        # Fix: compute a single monotonic deadline at entry. Every Playwright
+        # op consumes from the same budget via `remaining_ms()`. Total wall-
+        # clock is now bounded by `timeout_s` + O(ms) bookkeeping overhead.
+        #
+        # Per constraint #5: deadline-based (monotonic + arithmetic), NOT
+        # signal-based — Python signals do not interact cleanly with the
+        # Playwright sync runner.
+        deadline = time.monotonic() + timeout_s
+
+        def remaining_ms() -> int:
+            """Milliseconds left until deadline, clamped to a minimum floor.
+
+            Clamping to `_MIN_OP_TIMEOUT_MS` ensures Playwright operations
+            receive a positive timeout even when the budget is nearly
+            exhausted — they will then raise a clean PlaywrightTimeoutError
+            within ~100ms rather than rejecting `timeout=0` awkwardly.
+            """
+            left = int((deadline - time.monotonic()) * 1000)
+            return max(_MIN_OP_TIMEOUT_MS, left)
 
         # Import here so module loads on machines without Chromium installed.
         from playwright.sync_api import (
@@ -313,7 +349,10 @@ class PlaywrightAdapter(Adapter):
                     _record_trace_started()
 
                 page = context.new_page()
-                page.set_default_navigation_timeout(timeout_ms)
+                # Bug-A fix: default navigation timeout uses the remaining
+                # budget at this moment; further per-op timeouts re-derive
+                # the remaining budget at call time.
+                page.set_default_navigation_timeout(remaining_ms())
 
                 # Plan 03-03 credential gate. Do an initial navigation so the
                 # page DOM is queryable for the login-form heuristic. If
@@ -322,10 +361,10 @@ class PlaywrightAdapter(Adapter):
                 # navigation inside expect_response so a fresh XHR can fire).
                 #
                 # The initial navigation here is bounded by the same
-                # navigation timeout; a navigation timeout still surfaces as
+                # navigation budget; a navigation timeout still surfaces as
                 # PlaywrightTimeout downstream (both extraction paths fail).
                 try:
-                    page.goto(target_url, timeout=timeout_ms)
+                    page.goto(target_url, timeout=remaining_ms())
                 except PlaywrightTimeoutError:
                     # Initial nav failed - let the XHR-intercept block also
                     # try (it might race a redirect successfully). Don't
@@ -339,6 +378,11 @@ class PlaywrightAdapter(Adapter):
 
                 try:
                     # D-01a path A: XHR intercept first.
+                    # Bug-A fix: every Playwright op below draws from the
+                    # shared `remaining_ms()` budget. The expect_response
+                    # context manager and the goto inside it share the same
+                    # ~remaining budget — Playwright stops the whichever
+                    # fires first, so this is safe.
                     try:
                         with page.expect_response(
                             lambda r: (
@@ -349,9 +393,9 @@ class PlaywrightAdapter(Adapter):
                                     for kw in _XHR_KEYWORDS
                                 )
                             ),
-                            timeout=timeout_ms,
+                            timeout=remaining_ms(),
                         ) as resp_info:
-                            page.goto(target_url, timeout=timeout_ms)
+                            page.goto(target_url, timeout=remaining_ms())
                         response = resp_info.value
                         try:
                             data = response.json()
@@ -361,10 +405,13 @@ class PlaywrightAdapter(Adapter):
                             postings_raw = self._parse_xhr_payload(data)
                         extraction_path = "xhr"
                     except PlaywrightTimeoutError:
-                        # D-01a path B: DOM fallback.
+                        # D-01a path B: DOM fallback. By this point the XHR
+                        # path consumed most of `timeout_s`; `remaining_ms()`
+                        # is now small — clamped to _MIN_OP_TIMEOUT_MS.
+                        # Total wall-clock remains bounded by `timeout_s`.
                         extraction_path = "dom"
                         try:
-                            page.goto(target_url, timeout=timeout_ms)
+                            page.goto(target_url, timeout=remaining_ms())
                         except PlaywrightTimeoutError:
                             # Navigation itself timed out - both paths dead.
                             raise PlaywrightTimeout(
@@ -373,10 +420,13 @@ class PlaywrightAdapter(Adapter):
                                 f"(url={target_url})"
                             ) from None
                         selector = None
-                        # Each selector probe gets a fraction of remaining
-                        # budget; first match wins.
+                        # Each selector probe gets a fraction of the
+                        # remaining budget at the moment of this loop;
+                        # first match wins.
+                        budget_for_selectors = remaining_ms()
                         per_selector_timeout = max(
-                            500, timeout_ms // max(1, len(_DOM_SELECTORS))
+                            _MIN_OP_TIMEOUT_MS,
+                            budget_for_selectors // max(1, len(_DOM_SELECTORS)),
                         )
                         for sel in _DOM_SELECTORS:
                             try:
@@ -527,6 +577,7 @@ __all__ = [
     "_parse_hint_kwargs",
     "_id_from_posting",
     "_DEFAULT_TIMEOUT_S",
+    "_MIN_OP_TIMEOUT_MS",
     "_DEBUG_TRACE_ENV",
     "_USER_AGENT",
     "_get_stealth_class",

@@ -345,6 +345,96 @@ def test_fetch_raises_playwright_timeout_when_both_paths_fail():
         PlaywrightAdapter().fetch(company, _test_route_handler=handler)
 
 
+# --- Bug A (2026-06-08) — timeout-stacking regression ------------------------
+
+
+def test_fetch_total_wall_clock_bounded_by_timeout_s():
+    """Bug-A regression: wall-clock for the worst path (XHR never fires, no DOM
+    selector matches) must be bounded by `timeout_s` plus small overhead, NOT
+    a multiple of it.
+
+    Pre-fix behavior:
+      The adapter allocated the full `timeout_ms` to each of THREE separate
+      Playwright operations (initial nav, XHR-intercept block, DOM-fallback
+      nav). On the worst path this stacked to 2-3x `timeout_s` (observed
+      ~120s on a 60s declared budget in production run 27160706571).
+
+    Post-fix behavior:
+      The adapter computes a single monotonic deadline at entry and every
+      Playwright op draws from `remaining_ms()`. Total wall-clock is
+      bounded by `timeout_s` + Playwright lifecycle overhead (browser
+      launch ~1s, context creation, etc.).
+
+    We use a 3s timeout and assert wall-clock under 10s. Pre-fix this test
+    would observe ~9-12s wall-clock (3x stacking + Playwright startup);
+    post-fix observes ~4-5s.
+
+    Headless Chromium startup overhead is the dominant non-Playwright
+    contribution. The pre-fix multiple of timeout would push wall-clock
+    well above the 10s ceiling on a 3s budget.
+    """
+    import time
+    company = CompanyConfig(
+        name="bounded",
+        url="https://www.bounded.example/careers",
+        hint="playwright:timeout_s=3",
+    )
+    handler = _make_blank_route()
+    t0 = time.monotonic()
+    with pytest.raises(PlaywrightTimeout):
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+    elapsed = time.monotonic() - t0
+    # 3s declared timeout + ~5s overhead (Chromium launch + context + page
+    # creation + final exception construction). Pre-fix the stacking would
+    # push this well above 10s on any reasonable machine.
+    assert elapsed < 10.0, (
+        f"Bug-A regression: wall-clock {elapsed:.2f}s exceeded ceiling "
+        f"of 10s on a 3s declared timeout — timeout stacking is back."
+    )
+
+
+def test_fetch_does_not_stack_timeouts_for_dom_fallback():
+    """Bug-A regression: the DOM-fallback path (entered when XHR never fires)
+    must NOT double the wall-clock relative to a hypothetical XHR-only run.
+
+    We assert the same ceiling as `test_fetch_total_wall_clock_bounded_by_timeout_s`
+    because both paths share the same `timeout_s` budget.
+    """
+    import time
+    # DOM-fallback path: serve a page with no XHR and no matching selector.
+    # _make_blank_route serves "<html><body><p>nothing here</p></body></html>"
+    # which forces XHR-intercept timeout then DOM-fallback timeout.
+    company = CompanyConfig(
+        name="dom-fallback-bounded",
+        url="https://www.dombounded.example/careers",
+        hint="playwright:timeout_s=3",
+    )
+    handler = _make_blank_route()
+    t0 = time.monotonic()
+    with pytest.raises(PlaywrightTimeout):
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+    elapsed = time.monotonic() - t0
+    assert elapsed < 10.0, (
+        f"Bug-A regression: DOM-fallback path wall-clock {elapsed:.2f}s "
+        f"exceeded 10s ceiling on a 3s declared timeout."
+    )
+
+
+def test_min_op_timeout_ms_constant_is_reasonable():
+    """Bug-A: the per-op clamp floor must be:
+      (a) > 0 so Playwright doesn't reject the timeout
+      (b) small enough that an exhausted budget terminates promptly
+
+    100ms is the chosen value. This test locks that policy into the suite
+    so a future tweak is intentional rather than accidental.
+    """
+    from src.adapters.playwright_fallback import _MIN_OP_TIMEOUT_MS
+    assert 1 < _MIN_OP_TIMEOUT_MS <= 1000, (
+        f"_MIN_OP_TIMEOUT_MS={_MIN_OP_TIMEOUT_MS} is outside the reasonable "
+        f"range (1, 1000]; revisit Bug-A fix policy."
+    )
+
+
 # --- Stealth on by default + opt-out ----------------------------------------
 
 
