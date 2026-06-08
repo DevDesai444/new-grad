@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plan 02-01 execute-complete; ready for Plan 02-02 (Workday)
-last_updated: "2026-06-08T04:08:00.000Z"
+stopped_at: Plan 02-02 execute-complete; ready for Plan 02-03 (Apple + JD-scan + retroactive Greenhouse D-03)
+last_updated: "2026-06-08T00:35:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
-  percent: 57
+  completed_plans: 5
+  percent: 71
 ---
 
 # STATE: new-grad
@@ -26,12 +26,12 @@ progress:
 ## Current Position
 
 Phase: 02 (ATS Breadth + JD-Scan) — EXECUTING
-Plan: 2 of 3 (Plan 02-01 COMPLETE; next is Plan 02-02 Workday)
+Plan: 3 of 3 (Plans 02-01 and 02-02 COMPLETE; next is Plan 02-03 Apple + JD-scan + retroactive Greenhouse D-03)
 **Milestone:** v1
 **Phase:** 2 — ATS Breadth + JD-Scan
-**Plan:** 02-01 complete — Lever + Ashby + SmartRecruiters adapters (commits bc05f08, 3a9308f, f77106c); 214 cumulative tests passing
+**Plan:** 02-02 complete — Workday adapter (commits ff6172a Task 1, 9d22e62 Task 2); 249 cumulative tests passing; ADP-07 closed
 **Status:** Executing Phase 02
-**Progress:** [███████░░░] 57% (4/7 plans complete: 3 in Phase 1, 1 in Phase 2)
+**Progress:** [███████░░░] 71% (5/7 plans complete: 3 in Phase 1, 2 in Phase 2)
 
 ### Phase 1 Goal
 
@@ -47,10 +47,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Performance Metrics
 
-- **Phases complete:** 0/4 (Phase 1 execute-complete, awaiting verification; Phase 2 Plan 1 of 3 complete)
+- **Phases complete:** 0/4 (Phase 1 execute-complete, awaiting verification; Phase 2 Plans 1+2 of 3 complete)
 - **Requirements mapped:** 71/71 (100%)
-- **Requirements validated:** 59/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01)
-- **Plans complete:** 4/7 (3/3 in Phase 01 + 1/3 in Phase 02 — Plan 02-01: ~25min, 3 tasks, 9 created + 2 modified files, 27 new tests / 214 cumulative)
+- **Requirements validated:** 60/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02)
+- **Plans complete:** 5/7 (3/3 in Phase 01 + 2/3 in Phase 02 — Plan 02-02: ~25min, 2 tasks, 3 created + 2 modified files, 35 new tests / 249 cumulative)
 - **Existential risks addressed:** 5/5 in Phase 01 (unchanged)
 
 ### Per-Plan Metrics
@@ -61,6 +61,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 01    | 02   | ~25min   | 3     | 12    |
 | 01    | 03   | ~8min    | 3     | 7 (6 new + 1 mod) |
 | 02    | 01   | ~25min   | 3     | 11 (9 new + 2 mod) |
+| 02    | 02   | ~25min   | 2     | 5 (3 new + 2 mod)  |
 
 ## Accumulated Context
 
@@ -103,6 +104,14 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 02-01 | `name="smartrecruiters"` vs dedup-prefix `"sr:"` split locked via dedicated regression test (`test_fetch_emits_stable_dedup_key_with_sr_prefix`) | Asserts BOTH `startswith('sr:')` AND `not startswith('smartrecruiters:')` to lock CONTEXT.md D-01a into the suite; full word + short prefix is intentional. |
 | 02-01 | Lever epoch-ms `createdAt` defensively None-on-bad-input rather than SchemaDrift | Lever sometimes omits the timestamp; `posted_date=None` is the correct render outcome (mirrors `_parse_iso_to_utc`'s contract). |
 | 02-01 | Each adapter defines its own module-level `_TIMEOUT_S = 20.0` rather than importing a shared constant | Locality + per-adapter tunability without touching siblings; mirrors greenhouse.py's pattern. |
+| 02-02 | Task 1 ships standalone-functional even before Task 2's pagination wrap | Single-page tenants work at HEAD of Task 1; diff stays small per commit; Task 2 wrapper is purely additive. |
+| 02-02 | `WorkdayAdapter.matches()` uses cheap subdomain substring check, not the full URL regex | matches() must be cheap per ADP-01 — substring is O(len(host)) vs regex compile+match cost on every URL lookup. |
+| 02-02 | `_parse_workday_url` emits diagnostic SchemaDrift naming WHICH piece is missing (host vs site) via a partial-match probe | Defensive UX: user fixing a typo in companies.txt sees what's wrong without log-diving. |
+| 02-02 | `fetch(company, seen_keys=None)` — optional kwarg default preserves Phase 1 single-arg Adapter.fetch contract | Behavior degrades gracefully to cold-start-cap-only when orchestrator hasn't been wired to thread seen_keys; correct in both modes. |
+| 02-02 | Sort-monotonicity violation logs WARNING + suppresses early-term, does NOT abort | Tradeoff favors completeness over speed when tenant sort ordering is broken. |
+| 02-02 | `_parse_workday_posted` excludes `bool` from the epoch-ms branch via `not isinstance(value, bool)` | Python `bool` is a subclass of `int` (True == 1); a JSON `true` value should not silently become datetime(1970-01-01, 1ms). |
+| 02-02 | `time.sleep` is monkeypatched to noop in slow tests via `src.adapters.workday.time.sleep -> lambda s: None` | Keeps `test_fetch_cold_start_cap_25_pages` under 100ms instead of ~25s; production keeps real sleep for rate-limit hedging. |
+| 02-02 | Ship 35 tests vs plan's "~14" budget | Granular split per postedOn form / per malformed-URL case gives clearer regression signal; no scope creep, all defend documented behavior. |
 
 ### Open Decisions
 
@@ -129,10 +138,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Session Continuity
 
-**Last session:** 2026-06-08T04:08:00Z
-**Last action:** Completed Plan 02-01 (3 tasks committed: bc05f08 Lever, 3a9308f Ashby, f77106c SmartRecruiters); 214/214 cumulative tests passing (187 baseline + 27 new); `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/02-ats-breadth-jd-scan/02-01-SUMMARY.md`. ADP-04, ADP-05, ADP-06 complete. ADP-14/15 open-closed contract re-proven: 0 edits to main.py / models.py / state_*.py / renderer.py / filter.py / config_loader.py. Registry now holds 4 adapters; normalizer dispatch covers all 4 sources.
-**Stopped at:** Plan 02-01 execute-complete; ready for Plan 02-02 (Workday adapter — D-01 URL regex + D-04 pagination + 3-form postedOn parsing)
-**Resume file:** `.planning/phases/02-ats-breadth-jd-scan/02-02-PLAN.md`
+**Last session:** 2026-06-08T00:35:00Z
+**Last action:** Completed Plan 02-02 Workday adapter (2 tasks committed: ff6172a Task 1 = URL parser + single-page fetch + postedOn 3-form resolver + 25 D-03 tests; 9d22e62 Task 2 = pagination + sort-monotonicity + normalizer dispatch + registry append + 10 more tests); 249/249 cumulative tests passing (214 baseline + 35 new); `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/02-ats-breadth-jd-scan/02-02-SUMMARY.md`. ADP-07 complete. ADP-14/15 open-closed contract re-proven with 5 adapters: 0 edits to main.py / models.py / state_*.py / renderer.py / filter.py / config_loader.py / any sibling adapter file. Registry now holds 5 adapters (greenhouse, lever, ashby, smartrecruiters, workday); normalizer dispatch covers all 5 sources.
+**Stopped at:** Plan 02-02 execute-complete; ready for Plan 02-03 (Apple adapter + JD-scan extension (FILT-03) + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough)
+**Resume file:** `.planning/phases/02-ats-breadth-jd-scan/02-03-PLAN.md`
 
 **Plan 01-01 Deliverables (Wave 1):**
 
@@ -188,3 +197,4 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 *Plan 01-02 complete: 2026-06-08*
 *Plan 01-03 complete: 2026-06-08 — Phase 1 execute-complete.*
 *Plan 02-01 complete: 2026-06-08 — Lever + Ashby + SmartRecruiters adapters (ADP-04/05/06); 214 tests; ADP-14/15 open-closed re-proven.*
+*Plan 02-02 complete: 2026-06-08 — Workday adapter (ADP-07); 249 tests; ADP-14/15 open-closed re-proven with 5 adapters; D-01 URL auto-parse + D-04 pagination with 25-page cap + sort-monotonicity + 3-form postedOn resolver + realistic User-Agent (Pitfall 5).*

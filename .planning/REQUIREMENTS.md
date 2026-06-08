@@ -37,7 +37,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **ADP-04**: Lever adapter — fetches `api.lever.co/v0/postings/<company>?mode=json`, stable key `lever:<company>:<uuid>`
 - [x] **ADP-05**: Ashby adapter — fetches `api.ashbyhq.com/posting-api/job-board/<org>`, stable key `ashby:<org>:<uuid>`
 - [x] **ADP-06**: SmartRecruiters adapter — fetches `api.smartrecruiters.com/v1/companies/<co>/postings`, stable key `sr:<co>:<id>`
-- [ ] **ADP-07**: Workday adapter — POSTs to `<tenant>.wd<N>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs` with pagination, stable key `wd:<tenant>:<id>`, handles epoch-ms dates
+- [x] **ADP-07**: Workday adapter — POSTs to `<tenant>.wd<N>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs` with pagination, stable key `wd:<tenant>:<id>`, handles epoch-ms dates
 - [ ] **ADP-08**: Apple Jobs adapter — POSTs to `jobs.apple.com/api/role/search`, stable key `apple:<id>`
 - [ ] **ADP-09**: Playwright fallback adapter — uses Chromium with `wait_for_selector` or `expect_response` interception, 20s per-page navigation timeout, post-render parse via selectolax
 - [ ] **ADP-10**: `playwright-stealth` is applied conditionally only on sites that demonstrably need it (per-site flag in registry)
@@ -174,7 +174,7 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | ADP-04 | Phase 2 | Complete |
 | ADP-05 | Phase 2 | Complete |
 | ADP-06 | Phase 2 | Complete |
-| ADP-07 | Phase 2 | Pending |
+| ADP-07 | Phase 2 | Complete |
 | ADP-08 | Phase 2 | Pending |
 | ADP-09 | Phase 3 | Pending |
 | ADP-10 | Phase 3 | Pending |
