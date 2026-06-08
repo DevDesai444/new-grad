@@ -12,25 +12,26 @@ An automated job-posting tracker that scans a configurable list of company caree
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ System scans every company in `companies.txt` once per hour, automatically — v1.0 (GitHub Actions hourly cron with concurrency group + timeout-minutes: 50)
+- ✓ System runs entirely on GitHub Actions (no laptop, no paid server, no manual trigger) — v1.0
+- ✓ System supports any career-page URL via 7 adapters: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Apple, Playwright (catch-all for JS-heavy SPAs) — v1.0
+- ✓ Filters postings to early-career roles via title-keyword gate (FILT-01/02/05/06) + JD-scan extracts experience range (FILT-03 informational, FILT-04 softened to display-only per Phase 2 D-02) — v1.0
+- ✓ Markdown table in `README.md` with 7-col order `Company | Position | Location | Salary | Experience | Posting | Age` rendered between sentinel markers — v1.0
+- ✓ Experience range extracted from JD via regex; surfaced in Experience column — v1.0 (display-only per D-02)
+- ✓ No duplicates — per-ATS stable dedup keys (`gh:<co>:<id>`, `lever:<co>:<uuid>`, `ashby:<org>:<uuid>`, `sr:<co>:<id>`, `wd:<tenant>:<id>`, `apple:<id>`, `pw:<host>:<id>`) — v1.0
+- ✓ Stale postings preserved forever (STATE-04 add-only merge; keys never deleted) — v1.0
+- ✓ Age column uses source `posted_date` when available, falls back to `first_seen` — v1.0
+- ✓ Posting URL is a clickable Markdown link to the original career portal — v1.0
+- ✓ Hourly commit-back via `stefanzweifel/git-auto-commit-action@v5` with `GITHUB_TOKEN` — v1.0
+- ✓ Claude CLI "Adding a Company" 5-step workflow documented in CLAUDE.md (try existing → resolve redirect → Playwright catch-all → write new adapter → credential branch) — v1.0
+- ✓ Credentials stored only as GitHub Actions Secrets via `SCRAPER_<CO>_<KIND>` convention; PlaywrightAdapter reads via `os.environ[...]`; never echoed in chat, never committed, never logged (SEC-03 structurally enforced) — v1.0
+- ✓ US-only region filter (FILT-07) — new requirement added during Phase 4 discuss; drops non-US postings via 8-rule classifier; ambiguous locations kept per FILT-05 bias — v1.0
 
 ### Active
 
-- [ ] System scans every company in `companies.txt` once per hour, automatically
-- [ ] System runs entirely on GitHub Actions (no laptop, no paid server, no manual trigger)
-- [ ] System supports any career-page URL the user provides, including ATS platforms (Greenhouse, Lever, Ashby, Workday, SmartRecruiters) and JS-heavy custom SPAs (Apple jobs, Nvidia Workday, etc.) via headless browser fallback
-- [ ] System filters postings to early-career roles (0–5 yrs experience) using title keywords AND job-description scan
-- [ ] System produces a Markdown table in `README.md` with columns: `Company | Position | Location | Salary | Experience | Posting | Age`
-- [ ] System extracts the experience range from each posting's description and surfaces it in the Experience column
-- [ ] System never duplicates a posting in the table — dedup by stable key (company + posting URL)
-- [ ] System keeps a posting in the table even after it disappears from the company's career page (no auto-removal)
-- [ ] Age column shows real posted date when the source exposes it; otherwise shows the date our scanner first observed the posting
-- [ ] Posting URL in the table opens the application page on the company's career portal
-- [ ] System commits and pushes table updates to the user's public GitHub repo (`github.com/DevDesai444/<repo>`) on every hourly run
-- [ ] User can add a new company via Claude CLI ("add this URL"); Claude edits `companies.txt` and commits
-- [ ] Any credentials required to scrape a specific career site (rare) are stored as GitHub Actions Secrets — never committed to the repo
+(All v1.0 requirements validated. Next milestone requirements TBD via `/gsd-new-milestone`.)
 
-### Out of Scope
+### Out of Scope (audited at v1.0 close)
 
 - **Notifications (email/Slack/SMS/push)** — user explicitly wants to check the repo manually; no notifications
 - **Web UI / dashboard** — table-in-README on GitHub is the entire UI
