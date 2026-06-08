@@ -11,7 +11,6 @@ import pytest
 
 from src.locations import is_us_location, normalize_location
 
-
 # --- normalize_location (D-02) ------------------------------------------------
 
 
