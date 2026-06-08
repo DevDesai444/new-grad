@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-06-08T00:00:00.000Z"
+status: executing
+last_updated: "2026-06-08T01:36:38.601Z"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 3
   completed_plans: 0
+  percent: 0
 ---
 
 # STATE: new-grad
@@ -26,7 +27,7 @@ progress:
 **Milestone:** v1
 **Phase:** 1 — Walking Skeleton
 **Plan:** (none yet — phase not yet planned)
-**Status:** Context gathered (2026-06-07); awaiting `/gsd-plan-phase 1`
+**Status:** Ready to execute
 **Progress:** [░░░░░░░░░░] 0/4 phases complete
 
 ### Phase 1 Goal
@@ -90,16 +91,22 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Session Continuity
 
-**Last action:** Phase 1 context gathered via `/gsd-discuss-phase 1` (2026-06-07)
+**Last action:** Phase 1 planned via `/gsd-plan-phase 1` (2026-06-07): 3 plans in 3 waves, 55/55 REQ-IDs covered, verification passed with 2 non-blocking warnings.
 **Files written:**
 
-- `.planning/ROADMAP.md`
-- `.planning/STATE.md`
-- `.planning/REQUIREMENTS.md` (Traceability table updated with REQ-ID → Phase mapping)
-- `.planning/phases/01-walking-skeleton/01-CONTEXT.md` (8 implementation decisions captured)
+- `.planning/phases/01-walking-skeleton/01-CONTEXT.md` (gathered earlier via discuss-phase)
 - `.planning/phases/01-walking-skeleton/01-DISCUSSION-LOG.md` (audit trail)
+- `.planning/phases/01-walking-skeleton/01-SKELETON.md` (Walking Skeleton manifest)
+- `.planning/phases/01-walking-skeleton/01-01-PLAN.md` (Wave 1 — scaffold + models + Adapter ABC + Greenhouse adapter)
+- `.planning/phases/01-walking-skeleton/01-02-PLAN.md` (Wave 2 — normalizer, filter, state_store, state_merger, renderer, registry)
+- `.planning/phases/01-walking-skeleton/01-03-PLAN.md` (Wave 3 — config_loader, main.py, end-to-end test, README docs)
+- `.planning/ROADMAP.md` (Phase 1 plans list finalized; INFRA-05 struck through per CONTEXT.md D-01)
 
-**Next action:** `/gsd-plan-phase 1` to decompose Phase 1 (Walking Skeleton) into executable plans, with CONTEXT.md as the locked-decisions input.
+**Plan-checker warnings (non-blocking, recorded for transparency):**
+- W-1 (CONTEXT.md drift): Plan 01-01 Task 3 ships 2 single-line error-branch smoke tests beyond D-07's "happy-path only" guidance. Planner self-documents the deviation; the extra tests can be removed at execution time if strict D-07 compliance is required.
+- W-2 (long-term gate semantics): Phase 1's sanity gate compares `still_listed_count` against monotonically-growing `prior_count`. Over many months `still_listed_count < 0.9 * prior_count` becomes structurally inevitable. Implementation matches STATE-06 as written. Fix can be deferred (most naturally to Phase 4 alongside OUT-09).
+
+**Next action:** `/gsd-execute-phase 1` to run all 3 plans through wave-based execution.
 
 **Recovery context:** If session is interrupted, resume by reading `.planning/phases/01-walking-skeleton/01-CONTEXT.md` (Phase 1 locked decisions, supersedes ROADMAP success criteria where they conflict — e.g., INFRA-05 dropped; criterion #1 live-data verification deferred), then `.planning/ROADMAP.md` (full phase definitions) and `.planning/REQUIREMENTS.md` (per-requirement → phase mapping).
 
