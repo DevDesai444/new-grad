@@ -575,3 +575,217 @@ def test_main_loop_resolve_url_failure_continues_per_company_isolation(
     assert code == 0
     saved = orjson.loads(state.read_bytes())
     assert len(saved["postings"]) == 1
+
+
+# --- Phase 4 Plan 04-03 — source_health end-to-end + doc invariant ------------
+
+
+def test_orchestrator_writes_source_health_to_seen_json(tmp_path, monkeypatch):
+    """Plan 04-03 D-04 / D-04d — orchestrator records per-company source_health
+    after each adapter call. After main() runs with one OK + one Blocked adapter,
+    on-disk seen.json carries:
+      - schema_version: 2
+      - source_health block with both companies' outcomes
+      - OK company → status='ok', consecutive_failures=0
+      - Blocked company → status='error' (1 failure < 3-fail threshold),
+        consecutive_failures=1, last_success_utc=None
+    """
+    from src import main as main_mod
+    from src import registry as reg
+
+    monkeypatch.setattr(reg, "ADAPTERS", [_OkAdapter, _BlockedAdapter])
+    cfg = _setup_companies(
+        tmp_path,
+        ("https://ok.example/CompanyA", None),
+        ("https://blocked.example/CompanyB", None),
+    )
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+    code = main_mod.main(cfg, state, readme)
+    assert code == 0
+
+    saved = orjson.loads(state.read_bytes())
+    assert saved["schema_version"] == 2
+    assert "source_health" in saved
+    health = saved["source_health"]
+
+    # Companies are named by the URL path segment per _setup_companies +
+    # load_companies derivation; verify via stable substring matching to keep
+    # the test resilient to companies.txt naming conventions.
+    co_a_keys = [k for k in health if "companya" in k.lower()]
+    co_b_keys = [k for k in health if "companyb" in k.lower()]
+    assert len(co_a_keys) == 1, f"expected one CompanyA health entry, got {list(health.keys())}"
+    assert len(co_b_keys) == 1, f"expected one CompanyB health entry, got {list(health.keys())}"
+
+    a_entry = health[co_a_keys[0]]
+    b_entry = health[co_b_keys[0]]
+
+    # OK adapter — successful scrape.
+    assert a_entry["status"] == "ok"
+    assert a_entry["consecutive_failures"] == 0
+    assert a_entry["last_success_utc"] is not None
+    assert a_entry["last_attempt_utc"] == a_entry["last_success_utc"]
+
+    # Blocked adapter — 1 failure (< 3 threshold) → status 'error', not 'blocked'.
+    assert b_entry["status"] == "error", (
+        f"1 failure should be 'error', not 'blocked' (3+ required). Got: {b_entry}"
+    )
+    assert b_entry["consecutive_failures"] == 1
+    assert b_entry["last_success_utc"] is None
+    assert b_entry["last_attempt_utc"] is not None
+
+
+def test_orchestrator_source_health_accumulates_across_runs(tmp_path, monkeypatch):
+    """D-04b — three consecutive blocked runs promote the company to 'blocked' status.
+
+    Verifies the cross-run accumulation: each run reads the prior source_health
+    block from seen.json, increments consecutive_failures, and after the 3rd run
+    the status flips from 'error' (1-2 fails) to 'blocked' (3+ fails).
+    """
+    from src import main as main_mod
+    from src import registry as reg
+
+    monkeypatch.setattr(reg, "ADAPTERS", [_BlockedAdapter])
+    cfg = _setup_companies(tmp_path, ("https://blocked.example/StuckCo", None))
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+
+    # Pre-seed seen.json with 100 prior entries so sanity gate doesn't fire on
+    # the empty scrape. Use v2 (current SCHEMA_VERSION).
+    prior = {
+        "schema_version": 2,
+        "last_run_utc": "2026-05-01T00:00:00+00:00",
+        "postings": {
+            f"gh:x:{i}": {
+                "still_listed": True,
+                "first_seen": "2026-05-01T00:00:00+00:00",
+                "last_seen": "2026-05-01T00:00:00+00:00",
+                "company": "X",
+                "title": "Engineer",
+                "location": "",
+                "salary": None,
+                "experience_min": None,
+                "experience_max": None,
+                "posting_url": f"https://x/{i}",
+                "posted_date": None,
+                "source_adapter": "greenhouse",
+            }
+            for i in range(100)
+        },
+        "source_health": {},
+    }
+    state.write_bytes(orjson.dumps(prior, option=orjson.OPT_SORT_KEYS))
+
+    # Run 1 — 1 failure → status 'error', consecutive_failures=1
+    assert main_mod.main(cfg, state, readme) == 0
+    h = orjson.loads(state.read_bytes())["source_health"]
+    co_keys = [k for k in h if "stuckco" in k.lower()]
+    assert len(co_keys) == 1
+    co = co_keys[0]
+    assert h[co]["consecutive_failures"] == 1
+    assert h[co]["status"] == "error"
+
+    # Run 2 — 2 failures → still 'error'
+    assert main_mod.main(cfg, state, readme) == 0
+    h = orjson.loads(state.read_bytes())["source_health"]
+    assert h[co]["consecutive_failures"] == 2
+    assert h[co]["status"] == "error"
+
+    # Run 3 — 3 failures → promoted to 'blocked'
+    assert main_mod.main(cfg, state, readme) == 0
+    h = orjson.loads(state.read_bytes())["source_health"]
+    assert h[co]["consecutive_failures"] == 3
+    assert h[co]["status"] == "blocked", (
+        f"3 consecutive failures should promote to 'blocked'; got {h[co]}"
+    )
+
+
+def test_orchestrator_source_health_no_adapter_classified_as_error(tmp_path, monkeypatch):
+    """D-04b — CFG-05 'no-adapter' outcome counts as a scan failure for health."""
+    from src import main as main_mod
+    from src import registry as reg
+
+    # No adapters registered → every company gets NoAdapterFound (CFG-05 skip path).
+    monkeypatch.setattr(reg, "ADAPTERS", [])
+    cfg = _setup_companies(tmp_path, ("https://unknown.example/UnmappedCo", None))
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+    code = main_mod.main(cfg, state, readme)
+    assert code == 0
+
+    saved = orjson.loads(state.read_bytes())
+    co_keys = [k for k in saved["source_health"] if "unmappedco" in k.lower()]
+    assert len(co_keys) == 1
+    entry = saved["source_health"][co_keys[0]]
+    assert entry["status"] == "error"
+    assert entry["consecutive_failures"] == 1
+    assert entry["last_success_utc"] is None
+
+
+def test_orchestrator_source_health_not_rendered_in_readme(tmp_path, monkeypatch):
+    """Plan 04-03 CONTEXT.md D-04c invariant — Source Health data IS persisted in
+    seen.json but is NOT rendered in the README. The user explicitly does not
+    want a health footer. This test guards against regression on that contract.
+    """
+    from src import main as main_mod
+    from src import registry as reg
+
+    monkeypatch.setattr(reg, "ADAPTERS", [_OkAdapter, _BlockedAdapter])
+    cfg = _setup_companies(
+        tmp_path,
+        ("https://ok.example/HealthyCo", None),
+        ("https://blocked.example/BrokenCo", None),
+    )
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+    assert main_mod.main(cfg, state, readme) == 0
+
+    readme_text = readme.read_text()
+    # Footer section heading must not appear.
+    assert "Source Health" not in readme_text, (
+        "D-04c violated — README contains a 'Source Health' heading; the data "
+        "is persisted in seen.json only, NOT rendered."
+    )
+    # HEALTH sentinels must not appear.
+    assert "BEGIN HEALTH" not in readme_text
+    assert "END HEALTH" not in readme_text
+    # Per-company status strings must not appear in the README (they only
+    # belong in seen.json.source_health). 'consecutive_failures' is the
+    # most-unique invariant of the source_health record shape.
+    assert "consecutive_failures" not in readme_text
+    assert "last_attempt_utc" not in readme_text
+    # But the data IS in seen.json — sanity check.
+    saved = orjson.loads(state.read_bytes())
+    assert "source_health" in saved
+    assert len(saved["source_health"]) == 2
+
+
+def test_out09_amended_with_strikethrough_in_requirements_md():
+    """Doc invariant — Plan 04-03 CONTEXT.md D-04c requires REQUIREMENTS.md OUT-09
+    to be amended with strikethrough + footnote pointing to D-04c. Mirrors the
+    Phase 1 INFRA-05 and Phase 2 FILT-04 strikethrough pattern.
+    """
+    from pathlib import Path
+
+    text = Path(".planning/REQUIREMENTS.md").read_text(encoding="utf-8")
+
+    # Strikethrough marker present (mirrors FILT-04 / INFRA-05 style).
+    assert "~~**OUT-09**~~" in text, (
+        "OUT-09 missing strikethrough form '~~**OUT-09**~~' per CONTEXT.md D-04c"
+    )
+    # Footnote points to the persisted-not-rendered data location.
+    assert "seen.json.source_health" in text, (
+        "OUT-09 footnote missing reference to seen.json.source_health"
+    )
+    # Footnote uses the exact 'NOT rendered in the README' phrasing.
+    assert "NOT rendered in the README" in text, (
+        "OUT-09 footnote missing the literal 'NOT rendered in the README' phrasing "
+        "(D-04c amendment text)"
+    )
+    # Traceability row marked Complete (not Pending).
+    assert "| OUT-09 | Phase 4 | Complete |" in text, (
+        "Traceability row for OUT-09 must read 'Complete' after Plan 04-03"
+    )
+    assert "| OUT-09 | Phase 4 | Pending |" not in text, (
+        "Traceability row for OUT-09 still says 'Pending' — was the amendment applied?"
+    )
