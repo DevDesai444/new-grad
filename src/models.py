@@ -22,6 +22,11 @@ class CompanyConfig(BaseModel):
     name: str = Field(..., min_length=1)
     url: str = Field(..., min_length=1)
     hint: str | None = None
+    # Phase 3 Plan 03-01 (CONTEXT.md D-01b): populated by the orchestrator after
+    # url_resolver.resolve_url(); downstream adapters read `company.resolved_url
+    # or company.url`. Optional + default None preserves Phase 1/2 call sites
+    # that don't set it. Additive change — no migration needed.
+    resolved_url: str | None = None
 
     @field_validator("url")
     @classmethod
