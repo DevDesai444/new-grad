@@ -43,6 +43,7 @@ from src.state_store import (
     sanity_gate,
     save_state_atomic,
 )
+from src.url_resolver import resolve_url
 
 # Use stdlib logging — GitHub Actions captures stdout/stderr.
 _LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
@@ -213,6 +214,26 @@ def main(
     outcomes: dict[str, str] = {}
     any_blocked = False
     for company in companies:
+        # Plan 03-01 (CONTEXT.md D-01b): pre-flight resolve to handle the
+        # CNAME→Workday case (~18 of 31 user URLs). resolve_url's contract is
+        # no-raise (returns original on any error), but wrap defensively per
+        # Pitfall 1 / one-bad-line isolation discipline — if a future bug
+        # causes a raise, log + continue with original URL.
+        try:
+            company.resolved_url = resolve_url(company.url)
+            if company.resolved_url != company.url:
+                logger.info(
+                    "resolve:%s %s -> %s",
+                    company.name, company.url, company.resolved_url,
+                )
+        except Exception as e:
+            # Defense in depth — Pitfall 17: log class name only.
+            logger.warning(
+                "resolve:%s unexpected %s — using original url",
+                company.name, type(e).__name__,
+            )
+            company.resolved_url = None
+
         fresh, outcome = _scrape_one(company, run_started_at)
         outcomes[company.name] = outcome
         if outcome == "blocked":

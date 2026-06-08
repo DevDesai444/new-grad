@@ -74,3 +74,50 @@ def test_unrecognized_hint_no_url_match_raises():
     )
     with pytest.raises(NoAdapterFound):
         get_adapter(c)
+
+
+# --- Phase 3 Plan 03-01 — resolved_url dispatch (CONTEXT.md D-01b) ------------
+
+
+def test_get_adapter_uses_resolved_url_when_set():
+    """D-01b — CNAME→Workday case: company.url is a generic CNAME that no
+    adapter matches; company.resolved_url is the canonical Workday tenant URL.
+    Registry must dispatch on the resolved URL, returning WorkdayAdapter.
+    """
+    from src.adapters.workday import WorkdayAdapter
+
+    c = CompanyConfig(
+        name="amd",
+        url="https://careers.amd.com/",
+        resolved_url="https://amd.wd1.myworkdayjobs.com/External",
+    )
+    a = get_adapter(c)
+    assert isinstance(a, WorkdayAdapter)
+
+
+def test_get_adapter_falls_back_to_url_when_resolved_url_none():
+    """Phase 1/2 semantics preserved — when resolved_url is None, dispatch
+    uses company.url unchanged. Greenhouse URL still resolves to Greenhouse.
+    """
+    c = CompanyConfig(
+        name="stripe",
+        url="https://boards.greenhouse.io/stripe",
+        resolved_url=None,
+    )
+    a = get_adapter(c)
+    assert isinstance(a, GreenhouseAdapter)
+
+
+def test_get_adapter_explicit_hint_overrides_resolved_url():
+    """CFG-03 hint precedence holds — explicit hint wins over resolved_url
+    match. Even if resolved_url would dispatch to Workday, a `greenhouse`
+    hint routes to GreenhouseAdapter.
+    """
+    c = CompanyConfig(
+        name="weirdco",
+        url="https://careers.weirdco.com/",
+        hint="greenhouse",
+        resolved_url="https://weirdco.wd1.myworkdayjobs.com/External",
+    )
+    a = get_adapter(c)
+    assert isinstance(a, GreenhouseAdapter)

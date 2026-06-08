@@ -307,3 +307,73 @@ def test_run_started_at_threaded_consistently(tmp_path, monkeypatch):
     assert rec["first_seen"] == rec["last_seen"]
     # And both should match last_run_utc.
     assert rec["first_seen"] == saved["last_run_utc"]
+
+
+# --- Phase 3 Plan 03-01 — resolve_url wiring (CONTEXT.md D-01b) ---------------
+
+
+def test_main_loop_calls_resolve_url_per_company(tmp_path, monkeypatch):
+    """D-01b — orchestrator must call resolve_url(company.url) for each
+    company before dispatching to the adapter. The returned resolved URL
+    must be assigned to company.resolved_url so the registry sees it.
+    """
+    from src import main as main_mod
+    from src import registry as reg
+
+    # Track every call resolve_url received + the company that triggered it.
+    seen_urls: list[str] = []
+
+    def fake_resolve_url(url: str, timeout_s: float = 5.0) -> str:
+        seen_urls.append(url)
+        # Simulate the CNAME→Workday redirect for amd, identity for the other.
+        if "careers.amd.com" in url:
+            return "https://amd.wd1.myworkdayjobs.com/External"
+        return url
+
+    monkeypatch.setattr(main_mod, "resolve_url", fake_resolve_url)
+    # Only the _OkAdapter is registered — we don't care which dispatches,
+    # just that resolve_url got called for each company.
+    monkeypatch.setattr(reg, "ADAPTERS", [_OkAdapter])
+
+    cfg = _setup_companies(
+        tmp_path,
+        ("https://ok.example/co1", None),
+        ("https://careers.amd.com/", None),
+    )
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+    code = main_mod.main(cfg, state, readme)
+    assert code == 0
+    # resolve_url called exactly twice — once per company.
+    assert seen_urls == [
+        "https://ok.example/co1",
+        "https://careers.amd.com/",
+    ]
+
+
+def test_main_loop_resolve_url_failure_continues_per_company_isolation(
+    tmp_path, monkeypatch
+):
+    """Defense in depth — even though resolve_url's contract is no-raise,
+    the orchestrator wraps it defensively. If a future bug causes a raise,
+    the main loop logs + continues with the original URL (ADP-12 / Pitfall 1
+    one-bad-line isolation discipline).
+    """
+    from src import main as main_mod
+    from src import registry as reg
+
+    def boom_resolve_url(url: str, timeout_s: float = 5.0) -> str:
+        raise RuntimeError("simulated resolver crash")
+
+    monkeypatch.setattr(main_mod, "resolve_url", boom_resolve_url)
+    monkeypatch.setattr(reg, "ADAPTERS", [_OkAdapter])
+
+    cfg = _setup_companies(tmp_path, ("https://ok.example/co", None))
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+    # Orchestrator MUST tolerate the resolver crash (defense in depth).
+    # Exit code 0 + the posting still lands (adapter dispatched on original URL).
+    code = main_mod.main(cfg, state, readme)
+    assert code == 0
+    saved = orjson.loads(state.read_bytes())
+    assert len(saved["postings"]) == 1

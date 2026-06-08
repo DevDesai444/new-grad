@@ -20,6 +20,11 @@ auth_state.json
 trace.zip
 playwright-report/
 
+# Playwright debug trace output (Phase 3 Plan 03-01 — D-06: trace="off" in
+# production, but local debug may produce these directories; never commit).
+.playwright-trace/
+playwright/.cache/
+
 # State store transient files (Pitfall 1 mitigation — atomic write artifacts must never be committed)
 seen.json.tmp
 seen.json.bak

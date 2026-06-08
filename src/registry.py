@@ -46,12 +46,17 @@ ADAPTERS: list[type[Adapter]] = [
 def get_adapter(company: CompanyConfig) -> Adapter:
     """Return an Adapter instance for the given company.
 
-    Resolution order:
+    Resolution order (Plan 03-01 update — CONTEXT.md D-01b):
     1. Explicit `#adapter=<name>` hint on the companies.txt line wins (CFG-03).
        Hint value may be a bare name or "name:metadata" (the metadata after `:`
        is reserved for adapter-specific routing like `workday:tenant=foo`).
-    2. Else URL-pattern match via Adapter.matches(); first hit wins.
-    3. Else raise NoAdapterFound.
+    2. Else URL-pattern match via Adapter.matches() against
+       `company.resolved_url or company.url`. The orchestrator populates
+       `resolved_url` via url_resolver.resolve_url() once per company per run,
+       which unblocks the CNAME→Workday case (e.g., careers.amd.com →
+       amd.wd1.myworkdayjobs.com).
+    3. Else raise NoAdapterFound (Phase 3 Wave 2 appends PlaywrightAdapter
+       as the catch-all, eliminating this branch for http(s) URLs).
     """
     if company.hint:
         hint_name = company.hint.split(":", 1)[0].strip().lower()
@@ -61,11 +66,15 @@ def get_adapter(company: CompanyConfig) -> Adapter:
         # Hint present but no match — fall through to URL match (defensive: a typo
         # or future-ATS hint should not prevent a recognizable URL from routing).
 
+    # Plan 03-01: prefer resolved_url (set by orchestrator after resolve_url())
+    # so CNAME→Workday URLs land on WorkdayAdapter instead of falling through.
+    effective_url = company.resolved_url or company.url
     for cls in ADAPTERS:
-        if cls.matches(company.url):
+        if cls.matches(effective_url):
             return cls()
 
     raise NoAdapterFound(
-        f"No adapter matches url={company.url!r} for company={company.name!r}. "
-        "Phase 1 only supports Greenhouse; other ATSes land in Phase 2."
+        f"No adapter matches url={company.url!r} "
+        f"(resolved={company.resolved_url!r}) for company={company.name!r}. "
+        "Phase 3 Wave 2 will add a Playwright catch-all."
     )

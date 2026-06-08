@@ -32,13 +32,24 @@ jobs:
         run: uv pip install --system -r requirements.lock
 
       - name: Cache Playwright browsers
-        # INFRA-04 — cache wired now so Phase 3 (when Playwright is actually installed)
-        # hits the cache on first run without a cache-key change. Cache miss is harmless in Phase 1
-        # because we don't invoke `playwright install` here.
+        # INFRA-04 — Phase 3 Plan 03-01 fills in the install step below.
+        # Pitfall 14 mitigation: ~90s saved on cache hit; cache miss installs
+        # Chromium fresh.
+        # Pitfall 26 mitigation: key includes hashFiles('requirements.lock')
+        # so a Playwright version bump via the lock file invalidates the cache
+        # automatically — prevents the "Executable doesn't exist" failure mode
+        # after a version bump.
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('requirements.lock') }}
+
+      - name: Install Playwright browsers
+        # Phase 3 Plan 03-01 — Chromium + system libs (ALSA, fonts).
+        # Cache hit makes this a near-no-op (~5s); cache miss installs
+        # Chromium (~90s, one-time per lockfile change). MUST run after
+        # `Install Python dependencies` so the `playwright` CLI is on PATH.
+        run: playwright install --with-deps chromium
 
       - name: Run scan
         # Plan 03 creates src/main.py. Until Plan 03 ships, this step is a no-op stub
