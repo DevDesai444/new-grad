@@ -131,3 +131,31 @@ def test_fetch_propagates_generic_exception(notion_company):
     respx.get(_API).mock(side_effect=httpx.NetworkError("dns failure"))
     with pytest.raises(httpx.HTTPError):
         SmartRecruitersAdapter().fetch(notion_company)
+
+
+# --- Bug C regression: adapter must honor company.resolved_url ----------------
+
+@respx.mock
+def test_fetch_uses_resolved_url_when_set(sr_fixture):
+    """Bug C regression — when `resolved_url` is populated (by url_resolver
+    after following HTTP redirects / body-scan / SR-probe), the adapter MUST
+    derive its API call from the RESOLVED URL, not the original `url`.
+
+    Production failure mode this protects against:
+      careers.servicenow.com (HTTP 403 on HEAD) → resolver SR-probes →
+      finds careers.smartrecruiters.com/ServiceNow → adapter ignored the
+      resolved URL and tried to extract an identifier from servicenow.com →
+      ValueError. Test asserts: identifier comes from resolved URL.
+    """
+    company = CompanyConfig(
+        name="servicenow",
+        url="https://careers.servicenow.com",  # original, not an SR URL
+        resolved_url="https://careers.smartrecruiters.com/ServiceNow",
+        hint=None,
+    )
+    api = "https://api.smartrecruiters.com/v1/companies/ServiceNow/postings"
+    respx.get(api).mock(return_value=httpx.Response(200, json=sr_fixture))
+    raw_postings = SmartRecruitersAdapter().fetch(company)
+    assert len(raw_postings) >= 1
+    for rp in raw_postings:
+        assert rp.raw["__identifier"] == "ServiceNow"

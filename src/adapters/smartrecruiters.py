@@ -73,7 +73,7 @@ class SmartRecruitersAdapter(Adapter):
         return segments[0]
 
     def fetch(self, company: CompanyConfig) -> list[RawPosting]:
-        identifier = self._extract_identifier(company.url)
+        identifier = self._extract_identifier(company.resolved_url or company.url)
         api_url = (
             f"https://api.smartrecruiters.com/v1/companies/{identifier}/postings"
         )

@@ -224,7 +224,7 @@ class WorkdayAdapter(Adapter):
           6. Inter-page sleep — random 0.5-1.5s jitter between pages. This is
              monkey-patched to noop in slow tests; production keeps it.
         """
-        parts = _parse_workday_url(company.url)
+        parts = _parse_workday_url(company.resolved_url or company.url)
         api_url = (
             f"https://{parts.tenant}.wd{parts.wd_num}.myworkdayjobs.com"
             f"/wday/cxs/{parts.tenant}/{parts.site}/jobs"

@@ -163,6 +163,24 @@ def test_scan_body_for_workday_finds_embedded_tenant_url():
     )
 
 
+def test_scan_body_for_workday_stops_at_site_segment_drops_login_suffix():
+    """Bug C regression — Workday HTML often embeds the unauthenticated
+    redirect URL `<tenant>.wdN.myworkdayjobs.com/<locale>/<site>/login`
+    (observed live on careers.arrow.com and careers.micron.com). The
+    body-scan must capture only up through `<site>` — the `/login` suffix
+    breaks WorkdayAdapter's URL regex and causes SchemaDrift.
+    """
+    body = (
+        "<html><body>"
+        '<a href="https://arrow.wd1.myworkdayjobs.com/en-US/AC/login">Login</a>'
+        "</body></html>"
+    )
+    assert (
+        _scan_body_for_workday(body)
+        == "https://arrow.wd1.myworkdayjobs.com/en-US/AC"
+    )
+
+
 def test_scan_body_for_workday_requires_path_component():
     """Bug-B: a bare host without a path is NOT a valid Workday URL.
 

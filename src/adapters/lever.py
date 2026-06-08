@@ -60,7 +60,7 @@ class LeverAdapter(Adapter):
         return segments[0]
 
     def fetch(self, company: CompanyConfig) -> list[RawPosting]:
-        identifier = self._extract_identifier(company.url)
+        identifier = self._extract_identifier(company.resolved_url or company.url)
         api_url = f"https://api.lever.co/v0/postings/{identifier}?mode=json"
 
         try:

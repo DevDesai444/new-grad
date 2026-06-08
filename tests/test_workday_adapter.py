@@ -577,3 +577,35 @@ def test_workday_dispatch_via_registry(nvidia_company):
     adapter = get_adapter(nvidia_company)
     assert isinstance(adapter, WorkdayAdapter)
 
+
+# --- Bug C regression: adapter must honor company.resolved_url ----------------
+
+@respx.mock
+def test_fetch_uses_resolved_url_when_set(workday_fixture):
+    """Bug C regression — when `resolved_url` is populated (by url_resolver
+    body-scan finding the Workday tenant URL inside a CNAME's HTML), the
+    adapter MUST parse the RESOLVED URL, not the original `url`.
+
+    Production failure mode this protects against:
+      careers.arrow.com → resolver body-scan finds
+      arrow.wd1.myworkdayjobs.com → adapter ignored the resolved URL and tried
+      to regex-parse careers.arrow.com → SchemaDrift. Test asserts the adapter
+      uses the resolved URL and successfully fetches.
+    """
+    company = CompanyConfig(
+        name="nvidia",
+        url="https://careers.example.com",  # original CNAME, NOT a Workday URL
+        resolved_url=(
+            "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite"
+        ),
+        hint=None,
+    )
+    respx.post(_API).mock(
+        return_value=httpx.Response(200, json=workday_fixture)
+    )
+    raw_postings = WorkdayAdapter().fetch(company)
+    assert len(raw_postings) == 5
+    for rp in raw_postings:
+        assert rp.raw["__tenant"] == "nvidia"
+        assert rp.raw["__dedup_key"].startswith("wd:nvidia:")
+

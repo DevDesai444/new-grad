@@ -85,14 +85,18 @@ _DEFAULT_TIMEOUT_S = 5.0
 # 100-200 KB; bounding at 1 MB caps per-company resolver cost.
 _BODY_SCAN_MAX_BYTES = 1_048_576  # 1 MiB
 
-# Bug-B: Workday tenant URL pattern (matches `https://<tenant>.wd<N>.
-# myworkdayjobs.com/<path>` with the path component required so we don't
-# return a bare host that the WorkdayAdapter can't parse). Locale segment
-# (en-US/) is optional and falls into the trailing path capture.
+# Bug-B: Workday tenant URL pattern. Matches `https://<tenant>.wd<N>.
+# myworkdayjobs.com[/<locale>]/<site>` and STOPS after the site segment.
+# This is deliberately non-greedy past the site: real Workday HTML often
+# embeds the unauthenticated-redirect URL `<tenant>.wd<N>.myworkdayjobs.com/
+# <locale>/<site>/login` (e.g. arrow.wd1...com/en-US/AC/login), but the
+# WorkdayAdapter regex only accepts up to the <site> segment. Capturing
+# only host + locale? + site ensures the returned URL is adapter-parsable.
 _WORKDAY_URL_BODY_PATTERN = re.compile(
     r"https://"
     r"(?:[a-z0-9-]+)\.wd(?:\d+)\.myworkdayjobs\.com"
-    r"/[A-Za-z0-9_\-/]+"
+    r"(?:/[a-z]{2}-[A-Z]{2})?"
+    r"/[A-Za-z0-9_-]+"
 )
 
 # Bug-B: SmartRecruiters probe host — when the SR identifier derives from

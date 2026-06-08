@@ -57,7 +57,7 @@ class GreenhouseAdapter(Adapter):
         return segments[0]
 
     def fetch(self, company: CompanyConfig) -> list[RawPosting]:
-        board_token = self._extract_board_token(company.url)
+        board_token = self._extract_board_token(company.resolved_url or company.url)
         api_url = (
             f"https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs?content=true"
         )
