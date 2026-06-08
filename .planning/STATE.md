@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plan 02-03 execute-complete — Phase 2 execute-complete; ready for `/gsd-verify-phase 2`
-last_updated: "2026-06-08T13:42:28.458Z"
+stopped_at: Plan 03-01 execute-complete — URL resolver + Playwright cache foundation landed; ready for Plan 03-02 (PlaywrightAdapter)
+last_updated: "2026-06-08T13:56:16.511Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 9
-  completed_plans: 6
-  percent: 67
+  completed_plans: 7
+  percent: 78
 ---
 
 # STATE: new-grad
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 02 (ATS Breadth + JD-Scan) — EXECUTE-COMPLETE
-Plan: 3 of 3 COMPLETE (all 3 Phase 2 plans landed)
+Phase: 03 (Playwright Fallback + Credential Workflow) — EXECUTING
+Plan: 2 of 3
 **Milestone:** v1
-**Phase:** 2 — ATS Breadth + JD-Scan
-**Plan:** 02-03 complete — Apple adapter (ADP-08) + JD-scan (FILT-03) + D-02 simplification + retroactive Greenhouse D-03 (commits 589f1da Task 1, c44f910 Task 2, efba667 Task 3); 298 cumulative tests passing; ADP-08 + FILT-03 closed. Phase 2 execute-complete — all 6 phase REQ-IDs (ADP-04..08 + FILT-03) closed.
-**Status:** Ready to execute
-**Progress:** [█████████░] 86% (6/7 plans complete: 3 in Phase 1, 3 in Phase 2)
+**Phase:** 3 — Playwright Fallback + Credential Workflow
+**Plan:** 03-01 complete — URL redirect resolver + CompanyConfig.resolved_url field + registry dispatch update + orchestrator wiring + workflow Chromium install/cache (commits 70fb47d Task 1, 07489cd Task 2); 316 cumulative tests passing (+18 new); foundation for Plan 03-02 PlaywrightAdapter landed. ADP-14/15 re-proven: zero edits to src/adapters/*.
+**Status:** Executing Phase 03
+**Progress:** [████████░░] 78%
 
 ### Phase 1 Goal
 
@@ -47,10 +47,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Performance Metrics
 
-- **Phases complete:** 0/4 (Phase 1 + Phase 2 both execute-complete, awaiting verification)
+- **Phases complete:** 0/4 (Phase 1 + Phase 2 both execute-complete, awaiting verification; Phase 3 wave 1/3 complete)
 - **Requirements mapped:** 71/71 (100%)
-- **Requirements validated:** 62/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03)
-- **Plans complete:** 6/7 (3/3 in Phase 01 + 3/3 in Phase 02 — Plan 02-03: ~30min, 3 tasks, 3 created + 7 modified files, 49 new tests / 298 cumulative)
+- **Requirements validated:** 62/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01 + ADP-07 in Plan 02-02 + ADP-08 + FILT-03 in Plan 02-03; ADP-09 partial via Plan 03-01 infrastructure prerequisite — adapter implementation pending in Plan 03-02)
+- **Plans complete:** 7/9 (3/3 Phase 01 + 3/3 Phase 02 + 1/3 Phase 03 — Plan 03-01: ~10min, 2 tasks, 3 created + 8 modified files, 18 new tests / 316 cumulative)
 - **Existential risks addressed:** 5/5 in Phase 01 (unchanged)
 
 ### Per-Plan Metrics
@@ -63,6 +63,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 02    | 01   | ~25min   | 3     | 11 (9 new + 2 mod) |
 | 02    | 02   | ~25min   | 2     | 5 (3 new + 2 mod)  |
 | 02    | 03   | ~30min   | 3     | 10 (3 new + 7 mod) |
+| 03    | 01   | ~10min   | 2     | 11 (3 new + 8 mod) |
 
 ## Accumulated Context
 
@@ -122,6 +123,13 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 02-03 | REQUIREMENTS.md FILT-04 line keeps `[x]` checkbox + adds `~~**FILT-04**~~` + footnote | Same convention as Phase 1 INFRA-05 strikethrough — the Phase 1 implementation literally satisfied FILT-04; the softening is a SEMANTIC change documented via strikethrough + footnote, not an unship. |
 | 02-03 | Apple sort-monotonicity violation logs WARNING + suppresses early-term (degrade to cap-only) | Mirrors Workday from Plan 02-02 — same tradeoff: completeness over speed when source sort ordering breaks. |
 | 02-03 | Ship 49 tests vs plan's "≥22" budget | Granular split per regex form + 2 Workday cases (absent vs stashed __description) + 4 retroactive Greenhouse tests + 16 Apple tests; defends explicit behavior per AC. |
+| 03-01 | resolve_url returns ORIGINAL url on any error rather than raising | D-01b explicit no-raise contract — graceful degradation lets orchestrator dispatch fall through to Playwright catch-all (Plan 03-02). Resolver is best-effort, never blocking. |
+| 03-01 | Orchestrator wraps resolve_url in defensive try/except even though contract is no-raise | Defense in depth (Pitfall 1 / ADP-12) — if a future bug causes a raise, main loop logs class name + continues with original URL. Costs nothing; protects everything. |
+| 03-01 | Resolver logs ONLY on actual resolution (URL changed), not on identity passes | Signal-rich logs — every line in Actions output means something happened. Identity-resolve (already-canonical Workday tenant URL) is the common case and would otherwise dominate logs. |
+| 03-01 | NoAdapterFound message extended to include resolved URL alongside original | Diagnostic clarity — when a CNAME doesn't resolve to a known ATS (Playwright catch-all not yet shipping in Wave 1), user sees BOTH urls in the log line and knows whether to blame the resolver or the adapter set. |
+| 03-01 | Ship 18 tests vs plan's nominal "19 / cumulative 317" target | Plan body enumerated 8 distinct resolver semantic cases + 2 models + 3 registry + 2 orchestrator + 3 workflow_yaml = 18 substantively. The "≥317" success criterion was rounded; substance matches plan body verbatim. |
+| 03-01 | Reworded `traceback.format_exc()` reference in resolver docstring to `the full traceback` | Plan AC: `grep -c traceback.format_exc src/url_resolver.py == 0`. Same precedent as Phase 1 Plan 01-03 docstring rewordings; intent preserved. |
+| 03-01 | Phase 3 .gitignore additions skip `playwright-report/` (already in Phase 1 list); add only `.playwright-trace/` and `playwright/.cache/` | Avoids duplicate gitignore entries; Phase 1 already covered `playwright-report/`. Plan's `<artifacts>` block listed all three; matching disposition — Phase 3 contributes the two truly new ones. |
 
 ### Open Decisions
 
@@ -148,10 +156,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Session Continuity
 
-**Last session:** 2026-06-08T08:25:00Z
-**Last action:** Completed Plan 02-03 (3 tasks committed: 589f1da Task 1 = Apple adapter + D-04 pagination + 16 tests; c44f910 Task 2 = JD-scan (FILT-03) + wire all 6 normalizers + D-02 is_early_career simplification + REQUIREMENTS.md FILT-04 strikethrough; efba667 Task 3 = retroactive Greenhouse D-03 tests closing Phase 1 W-1/D-07 debt); 298/298 cumulative tests passing (249 baseline + 49 new); `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/02-ats-breadth-jd-scan/02-03-SUMMARY.md`. ADP-08 + FILT-03 complete — Phase 2 execute-complete, all 6 phase REQ-IDs closed. ADP-14/15 open-closed re-proven across all 3 Phase 2 plans: 0 edits to main.py / models.py / state_*.py / renderer.py / config_loader.py. Registry now holds 6 adapters (greenhouse, lever, ashby, smartrecruiters, workday, apple); normalizer dispatch covers all 6 sources; every per-adapter normalizer wires extract_experience_range; is_early_career is title-gate-only per D-02. Greenhouse adapter has parity D-03 6-test coverage with the 5 newer adapters; D-07 deferred-test debt formally closed.
-**Stopped at:** Plan 02-03 execute-complete — Phase 2 execute-complete; ready for `/gsd-verify-phase 2`
-**Resume file:** `.planning/phases/02-ats-breadth-jd-scan/02-03-SUMMARY.md` (Phase 2 done; next milestone is verification)
+**Last session:** 2026-06-08T13:53:00Z
+**Last action:** Completed Plan 03-01 (2 tasks committed: 70fb47d Task 1 = src/url_resolver.py + CompanyConfig.resolved_url field per D-01b + 8 resolver tests + 2 model tests; 07489cd Task 2 = registry.get_adapter dispatches on resolved_url + main.py orchestrator wiring with defense-in-depth try/except + workflow YAML Chromium install step + .gitignore Phase 3 trace paths + 3 registry tests + 2 orchestrator tests + 3 workflow_yaml tests); 316/316 cumulative tests passing (298 baseline + 18 new); `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/03-playwright-fallback-credential-workflow/03-01-SUMMARY.md`. CNAME→Workday dispatch path proven manually (`CompanyConfig(name='amd', url='https://careers.amd.com', resolved_url='https://amd.wd5.myworkdayjobs.com/External')` → `WorkdayAdapter`). ADP-14/15 open-closed re-proven a fourth time: zero edits to src/adapters/* in this plan. ADP-09 infrastructure prerequisite closed; adapter implementation proper lands in Plan 03-02.
+**Stopped at:** Plan 03-01 execute-complete — URL resolver + Playwright cache foundation landed; ready for Plan 03-02 (PlaywrightAdapter)
+**Resume file:** `.planning/phases/03-playwright-fallback-credential-workflow/03-01-SUMMARY.md` (Phase 3 Wave 1 done; next is Wave 2 = PlaywrightAdapter)
 
 **Plan 01-01 Deliverables (Wave 1):**
 
@@ -197,7 +205,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 - W-1 (CONTEXT.md drift): Plan 01-01 Task 3 ships 2 single-line error-branch smoke tests beyond D-07's "happy-path only" guidance. **Outcome:** orchestrator prompt directed to keep them; both tests pass. Accepted.
 - W-2 (long-term gate semantics): Phase 1's sanity gate compares `still_listed_count` against monotonically-growing `prior_count`. Over many months `still_listed_count < 0.9 * prior_count` becomes structurally inevitable. Implementation matches STATE-06 as written. Fix can be deferred (most naturally to Phase 4 alongside OUT-09).
 
-**Next action:** Phase 1 execute-complete. Next step is verification (`/gsd-verify-phase 1` or equivalent), then user-side go-live steps: (1) enable GitHub Push Protection in repo settings (INFRA-08 / user_setup), (2) push the repo to `github.com/DevDesai444/new-grad`, (3) optionally add real Greenhouse URLs to `companies.txt` to begin live operation per CONTEXT.md D-03.
+**Next action:** Execute Plan 03-02 (PlaywrightAdapter — XHR-intercept first, DOM-fallback via selectolax, playwright-stealth on by default, 60s nav timeout, trace=off in prod, append as catch-all LAST in ADAPTERS). Anthropic careers (`anthropic.com/careers`) is the seed target per CONTEXT.md D-01. Phase 1 + Phase 2 remain awaiting verification.
 
 **Recovery context:** If session is interrupted, resume by reading `.planning/phases/01-walking-skeleton/01-CONTEXT.md` (Phase 1 locked decisions, supersedes ROADMAP success criteria where they conflict — e.g., INFRA-05 dropped; criterion #1 live-data verification deferred), then `.planning/phases/01-walking-skeleton/01-01-SUMMARY.md` (Wave 1) + `.planning/phases/01-walking-skeleton/01-02-SUMMARY.md` (Wave 2 — pure-core pipeline) + `.planning/phases/01-walking-skeleton/01-03-SUMMARY.md` (Wave 3 — orchestrator + e2e). Phase 1 deliverables: 10 source modules, 13 test files / 187 tests, 1 GitHub Actions workflow, 1 placeholder companies.txt, README with sentinels + full user-facing operational docs.
 
@@ -209,3 +217,4 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 *Plan 02-01 complete: 2026-06-08 — Lever + Ashby + SmartRecruiters adapters (ADP-04/05/06); 214 tests; ADP-14/15 open-closed re-proven.*
 *Plan 02-02 complete: 2026-06-08 — Workday adapter (ADP-07); 249 tests; ADP-14/15 open-closed re-proven with 5 adapters; D-01 URL auto-parse + D-04 pagination with 25-page cap + sort-monotonicity + 3-form postedOn resolver + realistic User-Agent (Pitfall 5).*
 *Plan 02-03 complete: 2026-06-08 — Apple adapter (ADP-08) + JD-scan (FILT-03) + D-02 is_early_career simplification + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough; 298 tests; Phase 2 execute-complete (all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03); ADP-14/15 open-closed re-proven across all 3 Phase 2 plans with 6 adapters.*
+*Plan 03-01 complete: 2026-06-08 — URL redirect resolver (src/url_resolver.py per CONTEXT.md D-01b) + CompanyConfig.resolved_url field + registry dispatch update + orchestrator wiring with defense-in-depth + workflow YAML Chromium install/cache step + .gitignore trace-output paths; 316 tests (+18 new: 8 url_resolver + 2 models + 3 registry + 2 orchestrator + 3 workflow_yaml); ADP-09 infrastructure prerequisite closed; ADP-14/15 open-closed re-proven a fourth time (zero edits to src/adapters/*); foundation for Plan 03-02 PlaywrightAdapter ready.*

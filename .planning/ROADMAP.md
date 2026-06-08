@@ -9,7 +9,7 @@
 
 - [ ] **Phase 1: Walking Skeleton** — One Greenhouse company scraped, filtered, deduped, rendered, committed end-to-end on hourly cron
 - [x] **Phase 2: ATS Breadth + JD-Scan** — Lever, Ashby, SmartRecruiters, Workday, Apple adapters land; experience-range extraction from descriptions  *(execute-complete 2026-06-08; awaiting `/gsd-verify-phase 2`)*
-- [ ] **Phase 3: Playwright Fallback + Credential Workflow** — Headless-browser adapter covers non-ATS SPAs; `gh secret set` workflow for sites needing login
+- [ ] **Phase 3: Playwright Fallback + Credential Workflow** — Headless-browser adapter covers non-ATS SPAs; `gh secret set` workflow for sites needing login (Wave 1/3 complete: URL resolver + Playwright cache foundation landed in Plan 03-01)
 - [ ] **Phase 4: Extraction Polish + Health Observability** — Salary + location normalization; per-source health footer renders status of every tracked company
 
 ## Phase Details
@@ -72,7 +72,7 @@
   3. User says "add this credentialed site" to Claude CLI — Claude inline-prompts for email + password in chat, calls `gh secret set SCRAPER_<COMPANY>_EMAIL` and `SCRAPER_<COMPANY>_PASSWORD --repo DevDesai444/new-grad`, confirms by running `gh secret list` (names only, no values), commits the adapter referencing `os.environ[<NAME>]`, and updates the README's secret-name audit table — none of the credential values ever appear in chat history, repo files, or Actions logs.
   4. `playwright-stealth` is applied only to sites that demonstrably need it (per-site flag in registry), not globally — verified by inspecting the registry config; sites that work without stealth do not pay its cost.
 **Plans**: 3 plans
-- [ ] 03-01-PLAN.md — URL redirect resolver (`src/url_resolver.py` + `CompanyConfig.resolved_url` field) + registry/orchestrator wiring + `.github/workflows/scan.yml` Chromium install step + cache key on `requirements.lock` + `.gitignore` trace-debug extension (Wave 1; foundational — claims ADP-09 prerequisite)
+- [x] 03-01-PLAN.md — URL redirect resolver (`src/url_resolver.py` + `CompanyConfig.resolved_url` field) + registry/orchestrator wiring + `.github/workflows/scan.yml` Chromium install step + cache key on `requirements.lock` + `.gitignore` trace-debug extension (Wave 1; foundational — claims ADP-09 prerequisite) — **COMPLETE 2026-06-08** (commits 70fb47d, 07489cd; 316 tests; ADP-14/15 preserved)
 - [ ] 03-02-PLAN.md — `PlaywrightAdapter` (`src/adapters/playwright_fallback.py`): XHR-intercept-first + DOM-selector fallback against Anthropic seed target + `playwright-stealth` on by default + 60s navigation timeout + trace=off-in-prod + `pw:<host>:<id>` dedup keys + normalizer dispatch + registry append-as-catch-all-LAST (Wave 2; ADP-09 + ADP-10)
 - [ ] 03-03-PLAN.md — Credential workflow: `InvalidCredential` typed exception in `src/adapters/base.py` + `_attempt_login` flow reads `SCRAPER_<COMPANY_UPPERCASE>_<KIND>` env vars (SEC-02) + structural SEC-03 ban on credential-value logging + CLAUDE.md `## Adding a Company` 5-step workflow (per D-03 + D-03a) + README.md `## Credential Naming Convention (SEC-06)` with per-adapter audit table (Wave 3; SEC-01 + SEC-02 + SEC-04 + SEC-06)
 
