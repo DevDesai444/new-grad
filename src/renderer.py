@@ -127,11 +127,75 @@ def _parse_iso(s: str | None) -> datetime | None:
         return None
 
 
+# ----- Phase 4 Plan 04-01 — salary cell handling (CONTEXT.md D-01a + D-01b). --
+
+# D-01a — placeholder strings that render as the em-dash instead of verbatim.
+# Anchored full-cell match after .strip() (case-insensitive). Anything that
+# doesn't fully match falls through to verbatim rendering (post-escape + trunc).
+_SALARY_PLACEHOLDER_PATTERN = re.compile(
+    r"^\s*("
+    r"competitive|"
+    r"doe|"
+    r"tbd|"
+    r"tbc|"
+    r"not\s+disclosed|"
+    r"n/?a|"
+    r"null|"
+    r"to\s+be\s+determined|"
+    r"negotiable|"
+    r"depends\s+on\s+experience|"
+    r"—"
+    r")\s*$",
+    re.IGNORECASE,
+)
+
+# D-01b — same 80-char cap that Pitfall 13 / NORM-07 mitigation language implied.
+# Single-char ellipsis keeps cell width predictable (one codepoint, one column
+# in most monospace rendering).
+_CELL_TRUNCATE_LEN = 80
+_CELL_TRUNCATE_ELLIPSIS = "…"  # U+2026 — single codepoint
+
+
+def _coalesce_salary(raw: str | None) -> str:
+    """D-01a — empty / None / placeholder → '—'; otherwise verbatim (stripped).
+
+    Pure function. Truncation is applied separately by _truncate_cell so that
+    callers can compose the two stages (or test them independently).
+    """
+    if raw is None:
+        return "—"
+    s = str(raw).strip()
+    if not s:
+        return "—"
+    if _SALARY_PLACEHOLDER_PATTERN.match(s):
+        return "—"
+    return s
+
+
+def _truncate_cell(text: str, limit: int = _CELL_TRUNCATE_LEN) -> str:
+    """D-01b — truncate to `limit` chars with single-char ellipsis if longer.
+
+    Currently wired only on the Salary cell in _table_row. Future polish can
+    apply this to other long cells (Position, Location) without changing the
+    helper. Strips trailing whitespace before appending the ellipsis so a
+    truncated cell never ends with `   …`.
+    """
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + _CELL_TRUNCATE_ELLIPSIS
+
+
 def _table_row(record: dict, run_started_at: datetime) -> str:
     company = escape_markdown_cell(record.get("company"))
     title = escape_markdown_cell(record.get("title"))
     location = escape_markdown_cell(record.get("location"))
-    salary = escape_markdown_cell(record.get("salary") or "—")
+    # D-01a (coalesce empty/placeholder → '—') + D-01b (80-char trunc) before
+    # the standard NORM-07 cell-escape pass. Order matters: coalesce first so
+    # placeholders never reach the escape step; truncate before escape so the
+    # 80-char limit applies to visible characters, not escape-padding.
+    salary = escape_markdown_cell(
+        _truncate_cell(_coalesce_salary(record.get("salary"))),
+    )
     experience = escape_markdown_cell(
         _format_experience(record.get("experience_min"), record.get("experience_max"))
     )

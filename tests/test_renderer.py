@@ -519,13 +519,14 @@ class TestSalaryCellRendering:
         out = render_readme(self._state_with_salary(long_salary), readme, _RUN)
         # The rendered cell must contain a truncated form ending with the
         # ellipsis character. Cell content sits between " | " delimiters.
-        # Find the salary cell substring.
-        # Each row is "| Company | Title | Location | <salary> | ..."
-        # Extract by splitting on " | " — the salary is at index 4.
+        # Row shape: "| Company | Title | Location | <salary> | ..."
+        # splitting on " | " yields: ['| Company', 'Title', 'Location',
+        # '<salary>', 'experience', '[Apply](...)', 'age |']
+        # so salary lives at index 3.
         rows = [line for line in out.splitlines() if line.startswith("| X |")]
         assert rows, "expected at least one data row starting with '| X |'"
         cells = rows[0].split(" | ")
-        salary_cell = cells[4]
+        salary_cell = cells[3]
         assert salary_cell.endswith("…")
         # The cell is <= 80 chars by D-01b.
         assert len(salary_cell) <= 80
