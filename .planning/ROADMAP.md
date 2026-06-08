@@ -10,7 +10,7 @@
 - [ ] **Phase 1: Walking Skeleton** — One Greenhouse company scraped, filtered, deduped, rendered, committed end-to-end on hourly cron
 - [x] **Phase 2: ATS Breadth + JD-Scan** — Lever, Ashby, SmartRecruiters, Workday, Apple adapters land; experience-range extraction from descriptions  *(execute-complete 2026-06-08; awaiting `/gsd-verify-phase 2`)*
 - [ ] **Phase 3: Playwright Fallback + Credential Workflow** — Headless-browser adapter covers non-ATS SPAs; `gh secret set` workflow for sites needing login (Wave 1/3 complete: URL resolver + Playwright cache foundation landed in Plan 03-01)
-- [ ] **Phase 4: Extraction Polish + Health Observability** — Salary + location normalization; per-source health footer renders status of every tracked company
+- [ ] **Phase 4: Extraction Polish + Health Observability** — Salary verbatim + location Remote-collapse + US-only region filter (FILT-07); per-source health DATA tracked in `seen.json.source_health` (data-persisted-not-rendered per Phase 4 CONTEXT.md D-04c)
 
 ## Phase Details
 
@@ -77,18 +77,23 @@
 - [x] 03-03-PLAN.md — Credential workflow: `InvalidCredential` typed exception in `src/adapters/base.py` + `_attempt_login` flow reads `SCRAPER_<COMPANY_UPPERCASE>_<KIND>` env vars (SEC-02) + structural SEC-03 ban on credential-value logging + CLAUDE.md `## Adding a Company` 5-step workflow (per D-03 + D-03a) + README.md `## Credential Naming Convention (SEC-06)` with per-adapter audit table (Wave 3; SEC-01 + SEC-02 + SEC-04 + SEC-06)
 
 ### Phase 4: Extraction Polish + Health Observability
-**Goal**: Salary and Location columns are useful (not just `—`) for the majority of postings, and the README footer surfaces per-source health (ok / blocked / schema-drift / error) so the user can passively notice when a company's adapter has degraded without needing notifications.
+**Goal**: Salary and Location columns populate verbatim from the source (no parsing per Phase 4 CONTEXT.md D-01); Remote-variant locations collapse to canonical `Remote (US)` / `Remote (non-US)` (D-02); a US-only region filter (FILT-07 — new requirement defined in this phase per D-03) drops non-US postings before render; per-source adapter health is **tracked in `seen.json.source_health` but NOT rendered in the README** (D-04c — user explicitly does not want a footer; data exists for Claude CLI diagnostic reads).
 **Mode:** mvp
-**Depends on**: Phase 3 (all adapter types — ATS, Playwright, credentialed — must exist so the health footer covers the full surface)
+**Depends on**: Phase 3 (all adapter types — ATS, Playwright, credentialed — must exist so source_health covers the full surface)
 **Requirements**:
-- NORM-02, NORM-03
-- OUT-09
+- NORM-02 *(per Phase 4 CONTEXT.md D-01: verbatim copy-paste from ATS, not regex extraction — replaces the original "pattern library" language)*
+- NORM-03
+- FILT-07 *(NEW — added by Phase 4 Plan 04-02 per CONTEXT.md D-03; reverses PROJECT.md's prior "US-only region filter" out-of-scope listing)*
+- ~~OUT-09~~ *(softened per Phase 4 CONTEXT.md D-04c — data persisted in `seen.json.source_health` (status / consecutive_failures / last_attempt_utc / last_success_utc); NOT rendered in README footer; rendering deferred to future 1-task plan if user reverses)*
 
 **Success Criteria** (what must be TRUE):
-  1. User opens the repo after an hourly run and sees a Salary column populated with normalized values (`$120k–$160k`, `≤$200k`, `$50/hr`) for the majority of postings whose source exposes salary; unparseable strings render as `—` (never `$0–$0` or `null`); the pattern library was validated against a corpus of ≥30 real strings from the user's tracked companies.
-  2. User opens the repo and sees Location values like `Remote (US)` (not `Remote, United States` on one row and `Remote — US` on another); multi-location postings render readably without breaking table alignment.
-  3. Below the postings table, the README shows a "Source Health" footer with rows like `Company | Last seen | Status` covering every URL in `companies.txt` — `ok` rows show recent timestamps, `blocked` rows show how long the company has been failing, `schema-drift` rows surface an adapter contract break; user can scan this footer in one glance to identify which company's adapter needs attention, no notification required.
-**Plans**: TBD
+  1. User opens the repo after an hourly run and sees a Salary column populated with the source's verbatim salary string (e.g., `$120k–$160k`, `£60,000 - £80,000`) for the majority of postings whose ATS exposes salary; empty / None / non-numeric placeholder strings (`Competitive`, `DOE`, `TBD`, `Not disclosed`, `N/A`, `null`, `Negotiable`) render as `—`; values longer than 80 chars are truncated with an ellipsis.  *[Refined per Phase 4 CONTEXT.md D-01: salary is verbatim copy-paste, not regex extraction. The "pattern library validated against 30 real strings" language from the original criterion is dropped — verbatim copy-paste has no parsing surface to validate.]*
+  2. User opens the repo and sees Location values like `Remote (US)` (not `Remote, United States` on one row and `Remote — US` on another); non-Remote city strings display verbatim (no deep city canonicalization per D-02b); multi-location postings render readably without breaking table alignment. Postings whose location classifies as non-US per `is_us_location()` are dropped before the renderer (FILT-07).
+  3. ~~Below the postings table, the README shows a "Source Health" footer...~~  *[Softened per Phase 4 CONTEXT.md D-04c: Source Health data IS tracked per-run in `seen.json.source_health` (status: `ok` / `blocked` / `schema-drift` / `error`; plus `consecutive_failures`, `last_attempt_utc`, `last_success_utc` per company), but is NOT rendered in the README footer — user explicitly does not want footer visibility. Future Claude CLI sessions consume the data directly from `seen.json.source_health`. Footer rendering deferred to a future 1-task plan if the user reverses this preference.]*
+**Plans**: 3 plans
+- [ ] 04-01-PLAN.md — `src/locations.py` (new module: `normalize_location` + `is_us_location` + ~30-city + 50-state curated lists) + normalizer extensions for all 7 adapters (salary verbatim per CONTEXT.md D-01 per-adapter access table; location routes through `normalize_location`) + renderer salary cell (placeholder coalesce → `—` + 80-char truncation per D-01a/b) (Wave 1; NORM-02 + NORM-03)
+- [ ] 04-02-PLAN.md — `is_us_location_acceptable()` in `src/filter.py` + orchestrator wiring (FILT-07 runs AFTER `is_early_career` and BEFORE state merge per CONTEXT.md D-03a) + REQUIREMENTS.md FILT-07 insertion as 7th Filter entry + Traceability + Coverage update (Wave 2; FILT-07 — NEW requirement)
+- [ ] 04-03-PLAN.md — `seen.json` schema bump 1 → 2 (`src/state_store.py` auto-migrates v1 → v2 in load_state; saver writes v2; v3+ still raises UnknownSchemaVersion per STATE-08) + `source_health` block per CONTEXT.md D-04 schema + `update_source_health` / `classify_outcome` helpers in `src/state_merger.py` (per D-04b classification rules: 3+ consecutive SiteBlocked → "blocked"; SchemaDrift → "schema-drift"; other → "error") + orchestrator wiring + REQUIREMENTS.md OUT-09 strikethrough amendment (D-04c) (Wave 3; OUT-09 data-persisted-not-rendered)
 
 ## Progress
 
@@ -96,15 +101,15 @@
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 3/3 | Execute-complete (verification pending) | 2026-06-08 |
 | 2. ATS Breadth + JD-Scan | 3/3 | Execute-complete (verification pending) — all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03 | 2026-06-08 |
-| 3. Playwright Fallback + Credential Workflow | 2/3 | Executing — Waves 1+2 complete (URL resolver + PlaywrightAdapter); Wave 3 (credential workflow) pending | - |
-| 4. Extraction Polish + Health Observability | 0/? | Not started | - |
+| 3. Playwright Fallback + Credential Workflow | 3/3 | Execute-complete (verification pending) — all 6 phase REQ-IDs closed: ADP-09 + ADP-10 + SEC-01/02/04/06 | 2026-06-08 |
+| 4. Extraction Polish + Health Observability | 0/3 | Planning complete; ready to execute | - |
 
 ## Phase Ordering Rationale
 
 - **Phase 1 is the only cheap chance to bake in the five existential risks** (atomic `seen.json` write, concurrency group, sanity gate against zero-result wipe, secret hygiene, schedule-keepalive `health.json`). Retrofitting these into a 500-line scraper is painful; building them into a 100-line slice is trivial. Phase 1 also locks the per-ATS dedup key format (`gh:<co>:<id>`) before adapter breadth — changing the key format retroactively requires a `seen.json` migration.
 - **Phase 2 is mechanical given Phase 1's adapter ABC.** Lever, Ashby, SmartRecruiters are similar single JSON GET calls; Workday is more complex (per-tenant POST body, epoch-ms dates) but belongs here because it covers Nvidia, Microsoft, and many large employers. Apple Jobs is included since its `api/role/search` is JSON-first (Playwright not needed). JD-scan extraction lands here because it co-evolves with the adapter response shapes that expose description text.
 - **Phase 3 is deferred until Phases 1–2 prove the adapter contract.** Playwright is the most complex adapter, most failure-prone (anti-bot, hydration timing, browser cache cost), and the only one that pairs with the credential workflow. Implementing it third keeps Phases 1–2 clean and ensures the adapter interface is mature before the most exotic case exercises it. The credential workflow (`gh secret set`) lives here because the first plausible credentialed scrape is a custom SPA, not an ATS API.
-- **Phase 4 is extraction polish that doesn't affect architectural correctness.** Salary patterns, location normalization, and the health footer are high-value but late-binding — they should ship after the core pipeline is stable so the salary pattern library can be built from a live corpus of real strings, and the health footer can cover every adapter type that exists. The footer is the product's passive observability layer, replacing notifications for an unattended system.
+- **Phase 4 is extraction polish that doesn't affect architectural correctness.** Salary verbatim + Remote-variant collapse + US-only filter + source_health observability data are late-binding — they ship after the core pipeline is stable. Per CONTEXT.md D-04c the Source Health footer is dropped from rendering (user does not want it); the underlying data is still tracked per-run for diagnostic reads via `seen.json.source_health`.
 
 ## SEC Mapping Justification
 
@@ -117,8 +122,8 @@ This split is correct because Phase 1 has no plausible credentialed scrape (Gree
 
 ## Coverage
 
-- v1 requirements total: 71 (10 INFRA + 6 CFG + 15 ADP + 6 FILT + 7 NORM + 8 STATE + 9 OUT + 6 SEC + 4 RUN)
-- Mapped: 71/71 ✓
+- v1 requirements total: 72 (10 INFRA + 6 CFG + 15 ADP + 7 FILT + 7 NORM + 8 STATE + 9 OUT + 6 SEC + 4 RUN) *[FILT-07 added by Phase 4 Plan 04-02 per CONTEXT.md D-03; original total was 71]*
+- Mapped: 72/72 ✓
 - Unmapped: 0
 - See REQUIREMENTS.md Traceability table for the per-requirement → phase mapping.
 
@@ -126,3 +131,4 @@ This split is correct because Phase 1 has no plausible credentialed scrape (Gree
 *Roadmap created: 2026-06-07*
 *Phase 2 plans finalized: 2026-06-08 (Plans 02-01, 02-02, 02-03 — covers ADP-04..08 + FILT-03)*
 *Phase 3 plans finalized: 2026-06-08 (Plans 03-01, 03-02, 03-03 — covers ADP-09, ADP-10, SEC-01, SEC-02, SEC-04, SEC-06)*
+*Phase 4 plans finalized: 2026-06-08 (Plans 04-01, 04-02, 04-03 — covers NORM-02, NORM-03, FILT-07 (new), OUT-09 (softened per D-04c))*

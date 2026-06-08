@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plan 03-03 execute-complete — Phase 3 closed. InvalidCredential typed exception + PlaywrightAdapter credential flow (SCRAPER_<COMPANY>_<KIND> env-var reads; MissingCredential/InvalidCredential typed errors; SEC-03 structural enforcement via grep audit) + CLAUDE.md "Adding a Company" 5-step workflow (per D-03 + D-03a) + README.md SEC-06 credential-naming convention with per-adapter audit table. All 6 Phase 3 REQ-IDs closed (ADP-09, ADP-10, SEC-01, SEC-02, SEC-04, SEC-06). 375 cumulative tests (+27 net). ADP-14/15 re-proven a sixth time. Ready for /gsd-verify-phase 3.
-last_updated: "2026-06-08T15:54:45.330Z"
+stopped_at: Plan 03-02 execute-complete — PlaywrightAdapter wired in as catch-all LAST; ready for Plan 03-03 (credential workflow + CLAUDE.md Adding-a-Company section)
+last_updated: "2026-06-08T17:42:28.730Z"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 9
+  total_plans: 12
   completed_plans: 9
-  percent: 100
+  percent: 75
 ---
 
 # STATE: new-grad
@@ -30,7 +30,7 @@ Plan: 3 of 3 done — awaiting verification
 **Milestone:** v1
 **Phase:** 3 — Playwright Fallback + Credential Workflow — EXECUTE-COMPLETE
 **Plan:** 03-03 complete — InvalidCredential typed exception in `src/adapters/base.py` (additive — pairs with MissingCredential); PlaywrightAdapter credential flow extending `src/adapters/playwright_fallback.py` with `_detect_login_form` + `_company_to_secret_prefix` + `_attempt_login` (reads SCRAPER_<COMPANY_UPPERCASE>_<KIND> env vars; raises MissingCredential on unset, InvalidCredential on form-persists-after-submit; `from None` suppresses chained traceback per D-02c); single-line orchestrator catch-tuple extension in `src/main.py` (import + tuple include InvalidCredential); CLAUDE.md `## Adding a Company` 5-step workflow (Step 1 try existing adapters → Step 2 resolve redirects → Step 3 Playwright catch-all → Step 4 write new adapter → Step 5 credential branch) per D-03 + D-03a; README.md `## Credential Naming Convention (SEC-06)` with per-adapter audit table + gh secret list/set/delete commands + SEC-04 names-only reminder. 27 net new tests (+3 base/orch unit + 13 playwright credential + 10 credential_flow integration+docs); 375 cumulative passing. ADP-14/15 re-proven a sixth time (zero edits to the 6 ATS adapter files; base.py is APPEND-ONLY). All 6 Phase 3 REQ-IDs closed (ADP-09 + ADP-10 from Plan 03-02; SEC-01 + SEC-02 + SEC-04 + SEC-06 from Plan 03-03). Commits: 86397ed Task 1, 9e8a6dd Task 2, 87912d7 Task 3.
-**Status:** Phase 03 execute-complete; ready for `/gsd-verify-phase 3`
+**Status:** Ready to execute
 **Progress:** [██████████] 100%
 
 ### Phase 1 Goal
