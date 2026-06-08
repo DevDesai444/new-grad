@@ -402,6 +402,153 @@ def test_orchestrator_isolates_invalid_credential(tmp_path, monkeypatch):
     assert not any("co-bad" in k for k in keys)
 
 
+# --- Phase 4 Plan 04-02 — FILT-07 US-only region filter wiring (D-03 / D-03a) -
+
+
+class _TwoCityAdapter(Adapter):
+    """Synthetic adapter returning two postings — one US, one non-US.
+
+    Both pass `is_early_career` (title="Software Engineer, New Grad"). Phase 4
+    Plan 04-02's FILT-07 must drop the London posting while keeping the SF one.
+    Uses source_adapter="greenhouse" so the existing _normalize_greenhouse
+    dispatcher handles the tolerant raw shape — saves registering a new
+    dispatch arm just for the test.
+    """
+
+    name: ClassVar[str] = "twocity"
+
+    @classmethod
+    def matches(cls, url):
+        return "twocity.example" in url
+
+    def fetch(self, company: CompanyConfig):
+        return [
+            RawPosting(
+                source_company=company.name,
+                source_adapter="greenhouse",
+                raw={
+                    "id": 1,
+                    "title": "Software Engineer, New Grad",
+                    "updated_at": "2026-06-01T00:00:00Z",
+                    "location": {"name": "San Francisco, CA"},
+                    "absolute_url": f"https://x/{company.name}/sf",
+                    "__dedup_key": f"gh:{company.name}:sf",
+                    "__board_token": company.name,
+                },
+            ),
+            RawPosting(
+                source_company=company.name,
+                source_adapter="greenhouse",
+                raw={
+                    "id": 2,
+                    "title": "Software Engineer, New Grad",
+                    "updated_at": "2026-06-01T00:00:00Z",
+                    "location": {"name": "London, UK"},
+                    "absolute_url": f"https://x/{company.name}/london",
+                    "__dedup_key": f"gh:{company.name}:london",
+                    "__board_token": company.name,
+                },
+            ),
+        ]
+
+
+def test_orchestrator_drops_non_us_postings_per_filt07(tmp_path, monkeypatch):
+    """FILT-07 integration — London posting dropped, SF posting kept.
+
+    Both postings pass the FILT-01/02 title-keyword gate ("New Grad"); the
+    SF one passes FILT-07 (is_us_location returns True for "San Francisco, CA")
+    while the London one fails (rule 6 — known non-US substring).
+    """
+    from src import main as main_mod
+    from src import registry as reg
+
+    monkeypatch.setattr(reg, "ADAPTERS", [_TwoCityAdapter])
+    cfg = _setup_companies(tmp_path, ("https://twocity.example/co", None))
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+    code = main_mod.main(cfg, state, readme)
+    assert code == 0
+
+    saved = orjson.loads(state.read_bytes())
+    keys = list(saved["postings"].keys())
+    # SF posting kept (US per FILT-07).
+    assert any(":sf" in k for k in keys), (
+        f"expected SF posting key, got {keys}"
+    )
+    # London posting dropped (non-US per FILT-07) — must NOT appear in seen.json.
+    assert not any(":london" in k for k in keys), (
+        f"London posting should have been dropped by FILT-07, found in {keys}"
+    )
+    # And the rendered README must not link the London posting.
+    readme_text = readme.read_text()
+    assert "/london" not in readme_text, (
+        "London posting URL leaked into README despite FILT-07 drop"
+    )
+    assert "/sf" in readme_text, "SF posting URL missing from README"
+
+
+def test_orchestrator_filt07_drop_emits_info_log_line(
+    tmp_path, monkeypatch, caplog
+):
+    """FILT-07 — dropped non-US postings get a logger.info line naming title + location.
+
+    Makes the filter behavior visible in the Actions log so the user can verify
+    "yes, the London Workday postings are being dropped on purpose" without
+    instrumenting. The log line must include both title and location for clarity.
+    """
+    import logging
+
+    from src import main as main_mod
+    from src import registry as reg
+
+    monkeypatch.setattr(reg, "ADAPTERS", [_TwoCityAdapter])
+    cfg = _setup_companies(tmp_path, ("https://twocity.example/co", None))
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+
+    with caplog.at_level(logging.INFO, logger="scan"):
+        code = main_mod.main(cfg, state, readme)
+    assert code == 0
+
+    # Find the FILT-07 drop line.
+    drop_lines = [
+        rec.getMessage()
+        for rec in caplog.records
+        if "FILT-07" in rec.getMessage()
+    ]
+    assert len(drop_lines) >= 1, (
+        f"expected ≥1 FILT-07 drop log line, got {[r.getMessage() for r in caplog.records]}"
+    )
+    # The drop line must name title + location for diagnostic clarity.
+    london_drops = [m for m in drop_lines if "London" in m]
+    assert len(london_drops) >= 1, (
+        f"expected ≥1 FILT-07 drop line mentioning 'London', got {drop_lines}"
+    )
+
+
+def test_orchestrator_filt07_does_not_drop_us_postings(tmp_path, monkeypatch):
+    """FILT-07 — a US-only company's postings all survive (regression guard).
+
+    Re-runs the Phase 1 _OkAdapter pattern (SF posting) and asserts FILT-07
+    leaves it untouched.
+    """
+    from src import main as main_mod
+    from src import registry as reg
+
+    monkeypatch.setattr(reg, "ADAPTERS", [_OkAdapter])
+    cfg = _setup_companies(tmp_path, ("https://ok.example/co", None))
+    state = tmp_path / "seen.json"
+    readme = _setup_readme(tmp_path)
+    code = main_mod.main(cfg, state, readme)
+    assert code == 0
+    saved = orjson.loads(state.read_bytes())
+    # _OkAdapter posts location="SF" (rule 5 — known US city substring) → keep.
+    assert len(saved["postings"]) == 1, (
+        "US-only posting must survive FILT-07; got "
+        f"{saved['postings']}"
+    )
+
+
 def test_main_loop_resolve_url_failure_continues_per_company_isolation(
     tmp_path, monkeypatch
 ):
