@@ -30,6 +30,7 @@ from src.state_store import SCHEMA_VERSION
 
 _CLAUDE_MD = Path("CLAUDE.md")
 _README_MD = Path("README.md")
+_DOCS_MD = Path("DOCS.md")
 
 
 # ============================================================================
@@ -93,34 +94,44 @@ def test_claude_md_documents_resolved_url_commit_per_d03a():
 
 
 def test_readme_has_credential_naming_section():
-    """SEC-06 — README.md must have a Credential Naming Convention section."""
-    text = _README_MD.read_text()
+    """SEC-06 — DOCS.md must have a Credential Naming Convention section.
+
+    Previously checked README.md; moved to DOCS.md as part of the docs
+    restructure (README trimmed to postings table only).
+    """
+    text = _DOCS_MD.read_text()
     assert "## Credential Naming Convention" in text, (
-        "README.md missing the `## Credential Naming Convention` section"
+        "DOCS.md missing the `## Credential Naming Convention` section"
     )
 
 
 def test_readme_documents_scraper_naming_pattern():
-    """SEC-02 / D-02a — README.md must document the SCRAPER_<COMPANY>_<KIND>
+    """SEC-02 / D-02a — DOCS.md must document the SCRAPER_<COMPANY>_<KIND>
     naming pattern. Both `SCRAPER_<COMPANY>` (used as a prefix shorthand) and
     the full `SCRAPER_<COMPANY_UPPERCASE>_<KIND>` pattern must appear so users
     can reproduce the convention.
+
+    Previously checked README.md; moved to DOCS.md as part of the docs
+    restructure (README trimmed to postings table only).
     """
-    text = _README_MD.read_text()
+    text = _DOCS_MD.read_text()
     assert "SCRAPER_<COMPANY>" in text, (
-        "README must reference the SCRAPER_<COMPANY> prefix shorthand"
+        "DOCS.md must reference the SCRAPER_<COMPANY> prefix shorthand"
     )
     assert "SCRAPER_<COMPANY_UPPERCASE>_<KIND>" in text, (
-        "README must show the full SCRAPER_<COMPANY_UPPERCASE>_<KIND> pattern"
+        "DOCS.md must show the full SCRAPER_<COMPANY_UPPERCASE>_<KIND> pattern"
     )
 
 
 def test_readme_lists_per_adapter_audit_table():
-    """SEC-06 — README's per-adapter table lets users audit which adapters
+    """SEC-06 — DOCS.md per-adapter table lets users audit which adapters
     actually reference secrets. Every adapter name from src/registry.ADAPTERS
     must appear in the table.
+
+    Previously checked README.md; moved to DOCS.md as part of the docs
+    restructure (README trimmed to postings table only).
     """
-    text = _README_MD.read_text()
+    text = _DOCS_MD.read_text()
     adapters = [
         "greenhouse",
         "lever",
@@ -132,29 +143,35 @@ def test_readme_lists_per_adapter_audit_table():
     ]
     missing = [a for a in adapters if a not in text]
     assert not missing, (
-        f"README SEC-06 audit table missing adapter row(s): {missing}"
+        f"DOCS.md SEC-06 audit table missing adapter row(s): {missing}"
     )
 
 
 def test_readme_documents_gh_secret_list_audit():
-    """SEC-04 — README must show the `gh secret list` audit command so the
+    """SEC-04 — DOCS.md must show the `gh secret list` audit command so the
     user can verify their secret inventory without ever displaying values.
+
+    Previously checked README.md; moved to DOCS.md as part of the docs
+    restructure (README trimmed to postings table only).
     """
-    text = _README_MD.read_text()
+    text = _DOCS_MD.read_text()
     assert "gh secret list --repo DevDesai444/new-grad" in text, (
-        "README must show `gh secret list --repo DevDesai444/new-grad`"
+        "DOCS.md must show `gh secret list --repo DevDesai444/new-grad`"
     )
 
 
 def test_readme_documents_sec04_names_only():
-    """SEC-04 — README must explicitly note that `gh secret list` shows
+    """SEC-04 — DOCS.md must explicitly note that `gh secret list` shows
     NAMES ONLY, never values. This is the central SEC-04 invariant.
+
+    Previously checked README.md; moved to DOCS.md as part of the docs
+    restructure (README trimmed to postings table only).
     """
-    text = _README_MD.read_text()
+    text = _DOCS_MD.read_text()
     # Accept either phrasing — "names only" or "never values" — both encode
     # the SEC-04 invariant equivalently.
     assert ("names only" in text) or ("never values" in text), (
-        "README must call out that gh secret list shows names only / "
+        "DOCS.md must call out that gh secret list shows names only / "
         "never values (SEC-04 invariant)"
     )
 
