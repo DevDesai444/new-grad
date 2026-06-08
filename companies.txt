@@ -1,7 +1,84 @@
 # companies.txt — one career URL per line.
 # Blank lines and lines starting with `#` are ignored.
-# Phase 1 supports Greenhouse only — other ATSes (Lever / Ashby / SmartRecruiters / Workday / Apple)
-# land in Phase 2. Non-Greenhouse URLs added before Phase 2 are silently skipped per CFG-05.
 #
-# Example (uncomment when ready):
-# https://boards.greenhouse.io/stripe
+# Phase 3 URL resolver auto-follows HTTP redirects, so CNAME hosts like
+# `careers.amd.com` are resolved to their underlying Workday tenant URL
+# at runtime — paste whatever URL you'd hand a friend.
+#
+# Order below is by likely adapter (fast → slow):
+#   - dedicated ATS adapters (Greenhouse/Lever/Ashby/SmartRecruiters/Workday/Apple) = ~1 sec/scrape
+#   - Playwright catch-all (custom SPAs) = ~5–15 sec/scrape
+#
+# Per the "Adding a Company" workflow in CLAUDE.md, expect to tune individual
+# sites post-launch — some custom SPAs may need per-site adapters.
+
+# ── Workday tenants (CNAME → resolved at runtime) ───────────────────────────
+# AMD
+https://careers.amd.com
+# Adobe
+https://careers.adobe.com
+# ARM
+https://careers.arm.com
+# Arrow Electronics
+https://careers.arrow.com
+# Bloomberg
+https://careers.bloomberg.com
+# Gartner
+https://jobs.gartner.com
+# HP
+https://www.hp.com/us-en/jobs/
+# JPMorgan Chase
+https://careers.jpmorgan.com
+# Lenovo
+https://jobs.lenovo.com
+# Micron
+https://careers.micron.com
+# Nvidia
+https://www.nvidia.com/en-us/about-nvidia/careers/
+# ServiceNow
+https://careers.servicenow.com
+# Uber
+https://www.uber.com/us/en/careers/
+
+# ── Likely Workday under static landing (resolver may need Playwright fallback) ──
+# Cadence
+https://www.cadence.com/en_US/home/company/careers.html
+# Intel
+https://www.intel.com/content/www/us/en/jobs/jobs-at-intel.html
+# Marvell
+https://www.marvell.com/company/careers.html
+# Qualcomm
+https://www.qualcomm.com/company/careers
+# STMicroelectronics
+https://www.st.com/content/st_com/en/about/careers.html
+# Synopsys
+https://www.synopsys.com/careers.html
+
+# ── Apple (dedicated adapter — jobs.apple.com hostname) ─────────────────────
+# Apple (jobs.apple.com hits Phase 2 Apple adapter; consumer landing would
+# hit Playwright catch-all and be much slower).
+https://jobs.apple.com
+
+# ── Custom SPAs (Playwright catch-all) ──────────────────────────────────────
+# Amazon (custom in-house ATS)
+https://www.amazon.jobs
+# Freenome
+https://www.freenome.com/careers/
+# GM
+https://search-careers.gm.com
+# Google (custom Google careers ATS)
+https://careers.google.com
+# LinkedIn
+https://careers.linkedin.com
+# Meta
+https://www.metacareers.com
+# Microsoft
+https://careers.microsoft.com
+# Oracle
+https://www.oracle.com/careers/
+# Samsung Research America
+https://www.sra.samsung.com/careers/
+# Samsung US
+https://www.samsung.com/us/about-us/careers/
+# Tesla
+https://www.tesla.com/careers
