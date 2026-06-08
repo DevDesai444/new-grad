@@ -1,0 +1,36 @@
+{
+  "jobs": [
+    {
+      "id": "j-100",
+      "title": "Software Engineer, New Grad",
+      "location": "San Francisco, CA",
+      "postingUrl": "https://www.anthropic.com/careers/j-100",
+      "postingDate": "2026-06-01T12:00:00Z",
+      "description": "0-3 years of experience required."
+    },
+    {
+      "id": "j-101",
+      "title": "Research Engineer I",
+      "location": "Remote",
+      "postingUrl": "https://www.anthropic.com/careers/j-101",
+      "postingDate": "2026-06-02T09:00:00Z",
+      "description": "Recent graduate role."
+    },
+    {
+      "id": "j-102",
+      "title": "Senior Staff Engineer",
+      "location": "London, UK",
+      "postingUrl": "https://www.anthropic.com/careers/j-102",
+      "postingDate": "2026-05-15T14:00:00Z",
+      "description": "10+ years experience required."
+    },
+    {
+      "id": "j-103",
+      "title": "Associate Product Manager",
+      "location": "New York, NY",
+      "postingUrl": "https://www.anthropic.com/careers/j-103",
+      "postingDate": "2026-06-03T10:00:00Z",
+      "description": ""
+    }
+  ]
+}
