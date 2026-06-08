@@ -12,7 +12,6 @@ that calls datetime.now(timezone.utc) and threads run_started_at through.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -22,7 +21,7 @@ class CompanyConfig(BaseModel):
 
     name: str = Field(..., min_length=1)
     url: str = Field(..., min_length=1)
-    hint: Optional[str] = None
+    hint: str | None = None
 
     @field_validator("url")
     @classmethod
@@ -52,11 +51,11 @@ class Posting(BaseModel):
     company: str = Field(..., min_length=1)
     title: str
     location: str = ""  # may be empty; renderer handles empties (OUT-08)
-    salary: Optional[str] = None  # raw string; NORM-02 will normalize in Phase 4
-    experience_min: Optional[int] = None
-    experience_max: Optional[int] = None
+    salary: str | None = None  # raw string; NORM-02 will normalize in Phase 4
+    experience_min: int | None = None
+    experience_max: int | None = None
     posting_url: str = Field(..., min_length=1)  # already canonicalized by normalizer
-    posted_date: Optional[datetime] = None  # UTC ISO-8601 if exposed by source
+    posted_date: datetime | None = None  # UTC ISO-8601 if exposed by source
     first_seen: datetime  # assigned by state_merger from run_started_at
     last_seen: datetime
     still_listed: bool = True

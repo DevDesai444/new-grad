@@ -1,0 +1,32 @@
+{
+  "jobs": [
+    {
+      "id": 4567890,
+      "internal_job_id": 1111111,
+      "title": "Software Engineer, New Grad",
+      "updated_at": "2026-06-01T14:00:00-04:00",
+      "location": {"name": "San Francisco, CA"},
+      "absolute_url": "https://boards.greenhouse.io/stripe/jobs/4567890",
+      "content": "<p>Join Stripe as a New Grad SWE. Recent graduate or bootcamp grad encouraged to apply.</p>"
+    },
+    {
+      "id": 4567891,
+      "internal_job_id": 1111112,
+      "title": "Senior Staff Engineer, Infrastructure",
+      "updated_at": "2026-05-20T10:00:00-04:00",
+      "location": {"name": "Remote, US"},
+      "absolute_url": "https://boards.greenhouse.io/stripe/jobs/4567891?utm_source=careers",
+      "content": "<p>10+ years of experience required.</p>"
+    },
+    {
+      "id": 4567892,
+      "internal_job_id": 1111113,
+      "title": "Associate Software Engineer",
+      "updated_at": "2026-06-05T08:30:00-04:00",
+      "location": {"name": "New York, NY"},
+      "absolute_url": "https://boards.greenhouse.io/stripe/jobs/4567892",
+      "content": "<p>0–3 years of experience. Entry-level role for new graduates.</p>"
+    }
+  ],
+  "meta": {"total": 3}
+}
