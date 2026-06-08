@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1 execute-complete; ready for verification
-last_updated: "2026-06-08T03:34:41.434Z"
+stopped_at: Plan 02-01 execute-complete; ready for Plan 02-02 (Workday)
+last_updated: "2026-06-08T04:08:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 3
-  percent: 50
+  total_plans: 7
+  completed_plans: 4
+  percent: 57
 ---
 
 # STATE: new-grad
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 01 (Walking Skeleton) — EXECUTE-COMPLETE (ready for verification)
-Plan: 3 of 3 complete (Plans 01-01, 01-02, 01-03 all committed)
+Phase: 02 (ATS Breadth + JD-Scan) — EXECUTING
+Plan: 2 of 3 (Plan 02-01 COMPLETE; next is Plan 02-02 Workday)
 **Milestone:** v1
-**Phase:** 1 — Walking Skeleton
-**Plan:** 01-03 complete — `feat(01-03): orchestrator main.py + config_loader + end-to-end pipeline test + README docs` (commits 836a9ec, 291aa50, 72f8450)
-**Status:** Ready to execute
-**Progress:** [██████████] 100%
+**Phase:** 2 — ATS Breadth + JD-Scan
+**Plan:** 02-01 complete — Lever + Ashby + SmartRecruiters adapters (commits bc05f08, 3a9308f, f77106c); 214 cumulative tests passing
+**Status:** Executing Phase 02
+**Progress:** [███████░░░] 57% (4/7 plans complete: 3 in Phase 1, 1 in Phase 2)
 
 ### Phase 1 Goal
 
@@ -47,11 +47,11 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Performance Metrics
 
-- **Phases complete:** 0/4 (Phase 1 execute-complete, awaiting verification)
+- **Phases complete:** 0/4 (Phase 1 execute-complete, awaiting verification; Phase 2 Plan 1 of 3 complete)
 - **Requirements mapped:** 71/71 (100%)
-- **Requirements validated:** 56/71 (16 from Plan 01-01 + 26 from Plan 01-02 + 14 from Plan 01-03: CFG-01/02/03/04/05/06, ADP-12/14/15, INFRA-08, RUN-01/02/04, SEC-03)
-- **Plans complete:** 3/3 in Phase 01 (Plan 01-01: 6min, 3 tasks, 19 files, 26 tests; Plan 01-02: ~25min, 3 tasks, 12 files, 124 new tests / 150 cumulative; Plan 01-03: ~8min, 3 tasks, 6 created + 1 modified files, 37 new tests / 187 cumulative)
-- **Existential risks addressed:** 5/5 in Phase 01 (concurrency group ✓, secret hygiene ✓, stable dedup keys ✓, schedule resilience via timeout-minutes:50 ✓, atomic write + .bak + sanity gate ✓; health.json knowingly omitted per CONTEXT.md D-01)
+- **Requirements validated:** 59/71 (56 in Phase 1 + ADP-04/05/06 in Plan 02-01)
+- **Plans complete:** 4/7 (3/3 in Phase 01 + 1/3 in Phase 02 — Plan 02-01: ~25min, 3 tasks, 9 created + 2 modified files, 27 new tests / 214 cumulative)
+- **Existential risks addressed:** 5/5 in Phase 01 (unchanged)
 
 ### Per-Plan Metrics
 
@@ -60,6 +60,7 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 01    | 01   | 6min     | 3     | 19    |
 | 01    | 02   | ~25min   | 3     | 12    |
 | 01    | 03   | ~8min    | 3     | 7 (6 new + 1 mod) |
+| 02    | 01   | ~25min   | 3     | 11 (9 new + 2 mod) |
 
 ## Accumulated Context
 
@@ -98,6 +99,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | 01-03 | Three-arm per-company isolation in main._scrape_one | Finer-grained than the plan's two-arm example: third arm catches per-posting normalize exceptions so one malformed entry doesn't kill the rest of a company's postings. |
 | 01-03 | Sanity-gate `new_count` arg = `count(still_listed=True in merged)`, not raw fresh count | Correct semantic for "visible postings"; otherwise a scan returning 0 fresh would falsely trigger gate when prior had still-listed-flip-to-False entries. |
 | 01-03 | README `Push protection` → `Push Protection` (capitalization) | Plan AC literal-grep match; substance unchanged. |
+| 02-01 | Ship 9 tests per adapter instead of plan's 8 | Split `test_fetch_emits_stable_dedup_key` out of happy-path test for clearer regression signal; 27 new vs plan's 24. |
+| 02-01 | `name="smartrecruiters"` vs dedup-prefix `"sr:"` split locked via dedicated regression test (`test_fetch_emits_stable_dedup_key_with_sr_prefix`) | Asserts BOTH `startswith('sr:')` AND `not startswith('smartrecruiters:')` to lock CONTEXT.md D-01a into the suite; full word + short prefix is intentional. |
+| 02-01 | Lever epoch-ms `createdAt` defensively None-on-bad-input rather than SchemaDrift | Lever sometimes omits the timestamp; `posted_date=None` is the correct render outcome (mirrors `_parse_iso_to_utc`'s contract). |
+| 02-01 | Each adapter defines its own module-level `_TIMEOUT_S = 20.0` rather than importing a shared constant | Locality + per-adapter tunability without touching siblings; mirrors greenhouse.py's pattern. |
 
 ### Open Decisions
 
@@ -124,10 +129,10 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 
 ## Session Continuity
 
-**Last session:** 2026-06-08T02:24:09Z
-**Last action:** Completed Plan 01-03 (3 tasks committed: 836a9ec, 291aa50, 72f8450); 187/187 cumulative tests passing; `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/01-walking-skeleton/01-03-SUMMARY.md`. **Phase 1 execute-complete.**
-**Stopped at:** Phase 1 execute-complete; ready for verification
-**Resume file:** N/A — next step is `/gsd-verify-phase 1` or similar verification entry point
+**Last session:** 2026-06-08T04:08:00Z
+**Last action:** Completed Plan 02-01 (3 tasks committed: bc05f08 Lever, 3a9308f Ashby, f77106c SmartRecruiters); 214/214 cumulative tests passing (187 baseline + 27 new); `ruff check src/ tests/` clean; `python -m src.main` against placeholder companies.txt exits 0; SUMMARY.md written at `.planning/phases/02-ats-breadth-jd-scan/02-01-SUMMARY.md`. ADP-04, ADP-05, ADP-06 complete. ADP-14/15 open-closed contract re-proven: 0 edits to main.py / models.py / state_*.py / renderer.py / filter.py / config_loader.py. Registry now holds 4 adapters; normalizer dispatch covers all 4 sources.
+**Stopped at:** Plan 02-01 execute-complete; ready for Plan 02-02 (Workday adapter — D-01 URL regex + D-04 pagination + 3-form postedOn parsing)
+**Resume file:** `.planning/phases/02-ats-breadth-jd-scan/02-02-PLAN.md`
 
 **Plan 01-01 Deliverables (Wave 1):**
 
@@ -182,3 +187,4 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 *Plan 01-01 complete: 2026-06-08*
 *Plan 01-02 complete: 2026-06-08*
 *Plan 01-03 complete: 2026-06-08 — Phase 1 execute-complete.*
+*Plan 02-01 complete: 2026-06-08 — Lever + Ashby + SmartRecruiters adapters (ADP-04/05/06); 214 tests; ADP-14/15 open-closed re-proven.*
