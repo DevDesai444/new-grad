@@ -51,9 +51,12 @@
 **Success Criteria** (what must be TRUE):
   1. User opens the repo after an hourly run and sees postings from at least 3 distinct ATS platforms (Greenhouse + Lever + at least one of Ashby/SmartRecruiters/Workday/Apple) in the same Markdown table, each with stable dedup keys (`gh:<co>:<id>`, `lever:<co>:<uuid>`, etc.); no duplicates across re-scans even when source URLs gain tracking params.
   2. Workday postings show correct posted dates (epoch-millisecond handling verified against a live Workday tenant) and Apple Jobs postings show correct postingDate; all dates render as UTC ISO 8601 internally and as human-readable Age (`3h`, `2d`, `3w`) in the table.
-  3. The Experience column shows `Xy–Yy` / `≤Yy` / blank for the majority of postings — extracted via JD-scan regex (`X+ years`, `X-Y years`, `entry-level`, `recent graduate`); a posting whose title passes the keyword gate but whose JD says `5+ years required` is correctly excluded from the table.
+  3. The Experience column shows `Xy–Yy` / `≤Yy` / blank for the majority of postings — extracted via JD-scan regex (`X+ years`, `X-Y years`, `entry-level`, `recent graduate`); a posting whose title passes the keyword gate but whose JD says `5+ years required` is correctly excluded from the table.  *[Softened per .planning/phases/02-ats-breadth-jd-scan/02-CONTEXT.md D-02: JD-scan is display-only; the title-pass / JD-says-5+yr row STAYS in the table with `Experience` showing `5y+` rather than being excluded. FILT-04 in REQUIREMENTS.md is struck through. The first half of the criterion (Experience column populates) still holds.]*
   4. One adapter failing (e.g., Workday returns `SiteBlocked` because the tenant is rate-limiting Actions IPs) does NOT abort the run for the other adapters; the failing company keeps its prior `seen.json` entries unchanged with `still_listed` preserved, and the rest of the table updates normally.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 02-01-PLAN.md — Lever, Ashby, SmartRecruiters adapters + normalizer dispatch + registry append + 24 D-03 tests (Wave 1; ADP-04/05/06)
+- [ ] 02-02-PLAN.md — Workday adapter (D-01 URL regex + D-04 pagination + 3-form postedOn parsing) + normalizer + registry + ~14 tests (Wave 2; ADP-07)
+- [ ] 02-03-PLAN.md — Apple adapter + JD-scan extension (extract_experience_range wires all 6 normalizers; is_early_career simplified per D-02) + retroactive Greenhouse D-03 tests + REQUIREMENTS.md FILT-04 strikethrough (Wave 3; ADP-08, FILT-03)
 
 ### Phase 3: Playwright Fallback + Credential Workflow
 **Goal**: User's `companies.txt` can include a JS-heavy SPA (e.g., Anthropic, custom careers portal) and the hourly run scrapes it via headless Chromium; if a site requires login, Claude CLI handles the entire credential-storage flow via `gh secret set` with zero manual repo-config work from the user.
@@ -89,7 +92,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Walking Skeleton | 3/3 | Execute-complete (verification pending) | 2026-06-08 |
-| 2. ATS Breadth + JD-Scan | 0/? | Not started | - |
+| 2. ATS Breadth + JD-Scan | 0/3 | Planned (execute pending) | - |
 | 3. Playwright Fallback + Credential Workflow | 0/? | Not started | - |
 | 4. Extraction Polish + Health Observability | 0/? | Not started | - |
 
@@ -118,3 +121,4 @@ This split is correct because Phase 1 has no plausible credentialed scrape (Gree
 
 ---
 *Roadmap created: 2026-06-07*
+*Phase 2 plans finalized: 2026-06-08 (Plans 02-01, 02-02, 02-03 — covers ADP-04..08 + FILT-03)*
