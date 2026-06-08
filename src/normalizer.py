@@ -159,6 +159,62 @@ def _normalize_ashby(rp: RawPosting, run_started_at: datetime) -> Posting:
     )
 
 
+def _normalize_smartrecruiters(rp: RawPosting, run_started_at: datetime) -> Posting:
+    """SmartRecruiters-specific normalization (ADP-06).
+
+    Per <adapter_specifications> in 02-01-PLAN.md:
+      title:        raw["name"]       (SR calls the title "name")
+      location:     compose city+country (either may be missing)
+      posting_url:  canonicalize_url(raw["ref"])  (defensive https:// prefix if relative)
+      posted_date:  _parse_iso_to_utc(raw["releasedDate"])
+
+    Note: rp.source_adapter == "smartrecruiters" (full word) while dedup_key prefix
+    is "sr:" (short). The split is documented in src/adapters/smartrecruiters.py.
+    """
+    raw = rp.raw
+    dedup_key = raw["__dedup_key"]
+    title = (raw.get("name") or "").strip()
+
+    loc = raw.get("location") or {}
+    if isinstance(loc, dict):
+        city = (loc.get("city") or "").strip()
+        country = (loc.get("country") or "").strip()
+    else:
+        city = country = ""
+    if city and country:
+        location = f"{city}, {country}"
+    else:
+        location = city or country
+
+    # SR's "ref" is sometimes relative; defensive https:// prefix if needed.
+    ref = (raw.get("ref") or "").strip()
+    if ref and not ref.startswith(("http://", "https://")):
+        ref = f"https://{ref.lstrip('/')}"
+    posting_url = canonicalize_url(ref) if ref else ""
+
+    posted_date = _parse_iso_to_utc(raw.get("releasedDate"))
+
+    company = rp.source_company
+    if company.islower():
+        company = company.capitalize()
+
+    return Posting(
+        dedup_key=dedup_key,
+        company=company,
+        title=title,
+        location=location,
+        salary=None,
+        experience_min=None,
+        experience_max=None,
+        posting_url=posting_url,
+        posted_date=posted_date,
+        first_seen=run_started_at,
+        last_seen=run_started_at,
+        still_listed=True,
+        source_adapter=rp.source_adapter,
+    )
+
+
 def _normalize_greenhouse(rp: RawPosting, run_started_at: datetime) -> Posting:
     """Greenhouse-specific normalization.
 
@@ -199,6 +255,7 @@ _DISPATCH = {
     "greenhouse": _normalize_greenhouse,
     "lever": _normalize_lever,
     "ashby": _normalize_ashby,
+    "smartrecruiters": _normalize_smartrecruiters,
 }
 
 

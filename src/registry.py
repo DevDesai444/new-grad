@@ -13,6 +13,7 @@ from src.adapters.ashby import AshbyAdapter
 from src.adapters.base import Adapter
 from src.adapters.greenhouse import GreenhouseAdapter
 from src.adapters.lever import LeverAdapter
+from src.adapters.smartrecruiters import SmartRecruitersAdapter
 from src.models import CompanyConfig
 
 
@@ -34,6 +35,7 @@ ADAPTERS: list[type[Adapter]] = [
     GreenhouseAdapter,
     LeverAdapter,
     AshbyAdapter,
+    SmartRecruitersAdapter,
 ]
 
 

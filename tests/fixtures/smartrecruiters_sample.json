@@ -1,0 +1,29 @@
+{
+  "totalFound": 3,
+  "content": [
+    {
+      "id": "sr-id-11111",
+      "name": "Software Engineer, New Grad",
+      "location": {"city": "San Francisco", "country": "US"},
+      "ref": "https://api.smartrecruiters.com/v1/companies/notion/postings/sr-id-11111",
+      "releasedDate": "2026-06-01T14:00:00.000Z",
+      "jobAd": {"sections": {"jobDescription": {"text": "Join us as a New Grad SWE. 0-2 years experience."}}}
+    },
+    {
+      "id": "sr-id-22222",
+      "name": "Director of Engineering",
+      "location": {"city": "Remote", "country": "US"},
+      "ref": "https://api.smartrecruiters.com/v1/companies/notion/postings/sr-id-22222?utm_source=careers",
+      "releasedDate": "2026-05-20T10:00:00.000Z",
+      "jobAd": {"sections": {"jobDescription": {"text": "15+ years of leadership experience required."}}}
+    },
+    {
+      "id": "sr-id-33333",
+      "name": "Junior Software Engineer",
+      "location": {"city": "New York", "country": "US"},
+      "ref": "https://api.smartrecruiters.com/v1/companies/notion/postings/sr-id-33333",
+      "releasedDate": "2026-06-05T08:30:00.000Z",
+      "jobAd": {"sections": {"jobDescription": {"text": "0-3 years experience. Entry-level role for recent graduates."}}}
+    }
+  ]
+}
