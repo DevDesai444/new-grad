@@ -70,6 +70,45 @@ Phase 1 needs **zero credentials** — the Greenhouse public boards API requires
 - Adapter code that catches HTTP exceptions logs **status code + URL + exception class only** — never the full traceback (which could include request headers, potentially leaking `Authorization: Bearer ...` tokens or cookies). See Pitfall 17.
 - **Secret naming convention placeholder** (filled in Phase 3): scraper credentials use `SCRAPER_<COMPANY>_<KIND>` (e.g., `SCRAPER_ACME_EMAIL`, `SCRAPER_ACME_PASSWORD`). The README's secret-audit table (Phase 3) lets the user list, rotate, or delete credentials via `gh secret` without touching repo files.
 
+## Credential Naming Convention (SEC-06)
+
+When the user adds a site that requires login (Phase 3 Plan 03-03), Claude CLI provisions credentials via `gh secret set` with the naming convention:
+
+```
+SCRAPER_<COMPANY_UPPERCASE>_<KIND>
+```
+
+Where:
+- `<COMPANY_UPPERCASE>` is the company name UPPERCASE with hyphens / spaces replaced by underscores (e.g., `acme-corp` → `ACME_CORP`).
+- `<KIND>` is one of: `EMAIL`, `USERNAME`, `PASSWORD`, `API_KEY`, `OAUTH_TOKEN` (v1 supports `EMAIL` + `PASSWORD` only — other kinds out of scope).
+
+### Per-Adapter Secret Audit
+
+| Adapter | Secrets Referenced | Notes |
+|---------|---------------------|-------|
+| greenhouse | (none) | Public boards API; no auth |
+| lever | (none) | Public postings API; no auth |
+| ashby | (none) | Public posting-API; no auth |
+| smartrecruiters | (none) | Public companies/postings API; no auth |
+| workday | (none) | Public CXS /jobs endpoint; no auth |
+| apple | (none) | Public api/role/search; no auth |
+| **playwright** | `SCRAPER_<COMPANY>_EMAIL` + `SCRAPER_<COMPANY>_PASSWORD` (per credentialed company) | Read at scrape-time via `os.environ`; never logged, never written to repo |
+
+### Audit, Rotate, Delete via `gh`
+
+```bash
+# List all secrets (names only — never values):
+gh secret list --repo DevDesai444/new-grad
+
+# Rotate one secret (provide new value via --body):
+gh secret set SCRAPER_ACME_PASSWORD --repo DevDesai444/new-grad --body "<new-password>"
+
+# Delete one secret:
+gh secret delete SCRAPER_ACME_PASSWORD --repo DevDesai444/new-grad
+```
+
+**SEC-04 reminder:** `gh secret list` shows only secret NAMES, never values. Credential values exist only in: (a) GitHub's encrypted secret storage, (b) the runtime environment of the Actions runner during a scan, and (c) the user's local shell when explicitly re-provisioning. They never appear in repo files, chat history, or workflow logs (per SEC-03).
+
 ## Hourly Cadence — What to Expect
 
 - GitHub Actions cron runs `0 * * * *` UTC. Free-tier cron can be **delayed 15–60 minutes** under load (PITFALLS.md §Pitfall 19) — "hourly" is approximate, not a sub-hour SLA.

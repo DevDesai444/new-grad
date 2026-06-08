@@ -198,7 +198,85 @@ Use these entry points:
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
 
+## Adding a Company
 
+When the user says "add this URL: <URL>", follow this 5-step flow autonomously. The user provides only the URL (and credentials if the site needs login).
+
+### Step 1: Try existing adapters
+
+Call `get_adapter(CompanyConfig(name=<derived>, url=<URL>))`. If an adapter matches (Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Apple) → append `<URL>` to `companies.txt`, commit `chore(companies): add <name>`, push. **Done.**
+
+### Step 2: Resolve redirects
+
+Call `resolve_url(<URL>)` (Phase 3 Plan 03-01 helper). If the resolved URL differs from the original, re-try `get_adapter(CompanyConfig(name=<derived>, url=<URL>, resolved_url=<resolved>))`. If now matches (typical CNAME→Workday case) → append the **resolved** URL (not the original — per D-03a) to `companies.txt`. Commit. **Done.**
+
+### Step 3: Playwright catch-all
+
+If no specific adapter matches even after resolution, `PlaywrightAdapter` will handle it (registered LAST in `ADAPTERS`). Before committing:
+
+1. Append `<URL>` to `companies.txt`.
+2. Run a one-shot verification:
+   ```bash
+   python -c "from src.adapters.playwright_fallback import PlaywrightAdapter; \
+              from src.models import CompanyConfig; \
+              r = PlaywrightAdapter().fetch(CompanyConfig(name='<derived>', url='<URL>')); \
+              print(len(r))"
+   ```
+   The output should be at least 1 (or the adapter should raise a typed `PlaywrightTimeout` we can diagnose).
+3. If verification succeeds → commit. **Done.**
+4. If verification fails → step 4.
+
+### Step 4: Write a new adapter (rare)
+
+Playwright catch-all couldn't extract postings cleanly — the site has a unique structure benefiting from a dedicated adapter.
+
+1. Create `src/adapters/<name>.py` subclassing `Adapter` (mirror `src/adapters/apple.py` shape).
+2. Insert `<NameAdapter>` into `ADAPTERS` in `src/registry.py` **before the Playwright catch-all** (at `len(ADAPTERS) - 1`) — does NOT modify any existing adapter file (ADP-15 invariant; `tests/test_adapter_contract.py` enforces this).
+3. Append `_normalize_<name>` to `src/normalizer.py`'s `_DISPATCH`.
+4. Write fixture + happy-path + 5 error-path tests mirroring `tests/test_apple_adapter.py`.
+5. `pytest tests/ -v` — all 365+ tests still pass.
+6. Append URL to `companies.txt`. Commit. **Done.**
+
+### Step 5: Credential branch (jumps in BEFORE step 1 if detected)
+
+When pasting a new URL, first probe whether it needs login: `httpx.get(<URL>, follow_redirects=True, timeout=5)` and search response body for `<input type="password">` or `<form action="*login*">`. If found → credentialed site.
+
+Then (per SEC-01 / SEC-02 / SEC-04):
+
+1. **Inline-prompt the user in chat:**
+
+   > "This site requires login. What email and password should I use? (I will store them as `SCRAPER_<COMPANY>_EMAIL` and `SCRAPER_<COMPANY>_PASSWORD` via `gh secret set` — values will never appear in chat history, repo files, or workflow logs.)"
+
+2. **Store secrets** (the user pastes them in chat once; never echo back):
+   ```bash
+   gh secret set SCRAPER_<COMPANY_UPPERCASE>_EMAIL --repo DevDesai444/new-grad --body "<email>"
+   gh secret set SCRAPER_<COMPANY_UPPERCASE>_PASSWORD --repo DevDesai444/new-grad --body "<password>"
+   ```
+   `<COMPANY_UPPERCASE>` is `company.name` uppercased with hyphens and spaces replaced by underscores. See `PlaywrightAdapter._company_to_secret_prefix` in `src/adapters/playwright_fallback.py`.
+
+3. **Verify by listing** (names ONLY, never values per SEC-04):
+   ```bash
+   gh secret list --repo DevDesai444/new-grad
+   ```
+
+4. **One-shot login test** (uses the stored secrets via env-var mapping in the workflow YAML; for local verification, run with the values temporarily in shell env, NEVER in a committed file):
+   ```bash
+   SCRAPER_<COMPANY>_EMAIL="<email>" SCRAPER_<COMPANY>_PASSWORD="<password>" \
+     python -c "from src.adapters.playwright_fallback import PlaywrightAdapter; \
+                from src.models import CompanyConfig; \
+                print(PlaywrightAdapter().fetch(CompanyConfig(name='<lowercase>', url='<URL>')))"
+   ```
+   - If returns ≥1 RawPosting → credentials work; continue to step 1.
+   - If raises `InvalidCredential` → re-prompt the user; **do NOT echo what was tried**.
+   - If raises `MissingCredential` → env-var setup failed; re-run the `gh secret set` and shell-env steps.
+
+5. **Update README SEC-06 secret-audit table** with the new entry.
+
+6. Append URL to `companies.txt`; commit.
+
+**Never echo credential values back in chat.** **Never commit them to any file.** **Never include them in commit messages or workflow logs.** GitHub auto-masks values registered as secrets in the `${{ secrets.* }}` block, but verify per-secret with `gh secret list`.
+
+**Out of scope for v1** (per CONTEXT.md `<deferred>`): 2FA, OAuth, magic-link auth. If the site requires any of these, document as unsupported and skip.
 
 <!-- GSD:profile-start -->
 ## Developer Profile
