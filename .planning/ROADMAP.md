@@ -92,7 +92,7 @@
   3. ~~Below the postings table, the README shows a "Source Health" footer...~~  *[Softened per Phase 4 CONTEXT.md D-04c: Source Health data IS tracked per-run in `seen.json.source_health` (status: `ok` / `blocked` / `schema-drift` / `error`; plus `consecutive_failures`, `last_attempt_utc`, `last_success_utc` per company), but is NOT rendered in the README footer — user explicitly does not want footer visibility. Future Claude CLI sessions consume the data directly from `seen.json.source_health`. Footer rendering deferred to a future 1-task plan if the user reverses this preference.]*
 **Plans**: 3 plans
 - [x] 04-01-PLAN.md — `src/locations.py` (new module: `normalize_location` + `is_us_location` + ~30-city + 50-state curated lists) + normalizer extensions for all 7 adapters (salary verbatim per CONTEXT.md D-01 per-adapter access table; location routes through `normalize_location`) + renderer salary cell (placeholder coalesce → `—` + 80-char truncation per D-01a/b) (Wave 1; NORM-02 + NORM-03)  — **Complete 2026-06-08: 124 net new tests / 499 cumulative; ADP-15 re-proven a 7th time**
-- [ ] 04-02-PLAN.md — `is_us_location_acceptable()` in `src/filter.py` + orchestrator wiring (FILT-07 runs AFTER `is_early_career` and BEFORE state merge per CONTEXT.md D-03a) + REQUIREMENTS.md FILT-07 insertion as 7th Filter entry + Traceability + Coverage update (Wave 2; FILT-07 — NEW requirement)
+- [x] 04-02-PLAN.md — `is_us_location_acceptable()` in `src/filter.py` + orchestrator wiring (FILT-07 runs AFTER `is_early_career` and BEFORE state merge per CONTEXT.md D-03a) + REQUIREMENTS.md FILT-07 insertion as 7th Filter entry + Traceability + Coverage update (Wave 2; FILT-07 — NEW requirement)  — **Complete 2026-06-08: 25 net new tests / 524 cumulative; ADP-15 re-proven an 8th time**
 - [ ] 04-03-PLAN.md — `seen.json` schema bump 1 → 2 (`src/state_store.py` auto-migrates v1 → v2 in load_state; saver writes v2; v3+ still raises UnknownSchemaVersion per STATE-08) + `source_health` block per CONTEXT.md D-04 schema + `update_source_health` / `classify_outcome` helpers in `src/state_merger.py` (per D-04b classification rules: 3+ consecutive SiteBlocked → "blocked"; SchemaDrift → "schema-drift"; other → "error") + orchestrator wiring + REQUIREMENTS.md OUT-09 strikethrough amendment (D-04c) (Wave 3; OUT-09 data-persisted-not-rendered)
 
 ## Progress
@@ -102,7 +102,7 @@
 | 1. Walking Skeleton | 3/3 | Execute-complete (verification pending) | 2026-06-08 |
 | 2. ATS Breadth + JD-Scan | 3/3 | Execute-complete (verification pending) — all 6 phase REQ-IDs closed: ADP-04..08 + FILT-03 | 2026-06-08 |
 | 3. Playwright Fallback + Credential Workflow | 3/3 | Execute-complete (verification pending) — all 6 phase REQ-IDs closed: ADP-09 + ADP-10 + SEC-01/02/04/06 | 2026-06-08 |
-| 4. Extraction Polish + Health Observability | 1/3 | Plan 04-01 execute-complete (NORM-02 + NORM-03 closed); Plans 04-02 + 04-03 pending | - |
+| 4. Extraction Polish + Health Observability | 2/3 | Plans 04-01 + 04-02 execute-complete (NORM-02 + NORM-03 + FILT-07 closed); Plan 04-03 pending | - |
 
 ## Phase Ordering Rationale
 
