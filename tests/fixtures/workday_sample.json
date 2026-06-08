@@ -1,0 +1,40 @@
+{
+  "total": 5,
+  "jobPostings": [
+    {
+      "title": "Software Engineer, New Grad",
+      "externalPath": "/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer-New-Grad_R-101",
+      "locationsText": "US, CA, Santa Clara",
+      "postedOn": 1748707200000,
+      "bulletFields": ["R-101"]
+    },
+    {
+      "title": "Senior Staff Engineer, Infrastructure",
+      "externalPath": "/en-US/NVIDIAExternalCareerSite/job/Remote/Senior-Staff-Engineer_R-202",
+      "locationsText": "US, Remote",
+      "postedOn": "2026-05-20T10:00:00+00:00",
+      "bulletFields": ["R-202"]
+    },
+    {
+      "title": "Associate Software Engineer",
+      "externalPath": "/en-US/NVIDIAExternalCareerSite/job/New-York/Associate-Software-Engineer_R-303",
+      "locationsText": "US, NY, New York",
+      "postedOn": "Posted Today",
+      "bulletFields": ["R-303"]
+    },
+    {
+      "title": "Junior Data Scientist",
+      "externalPath": "/en-US/NVIDIAExternalCareerSite/job/Austin/Junior-Data-Scientist_R-404",
+      "locationsText": "US, TX, Austin",
+      "postedOn": "Posted 3 Days Ago",
+      "bulletFields": ["R-404"]
+    },
+    {
+      "title": "Principal Engineer, Compilers",
+      "externalPath": "/en-US/NVIDIAExternalCareerSite/job/Remote/Principal-Engineer_R-505",
+      "locationsText": "US, Remote",
+      "postedOn": "Posted 30+ Days Ago",
+      "bulletFields": ["R-505"]
+    }
+  ]
+}
