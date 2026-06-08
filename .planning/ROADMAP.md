@@ -38,7 +38,7 @@
 **Plans**: 3 plans
 - [x] 01-01-PLAN.md — Project scaffold, .gitignore, GH Actions workflow, data models, Adapter ABC + typed errors, Greenhouse adapter + fixture + unit tests (Wave 1)
 - [x] 01-02-PLAN.md — Pure-core pipeline: normalizer, filter, state_store (atomic write + sanity gate), state_merger (add-only), renderer (sentinels + Markdown escape + idempotent), registry (URL dispatch) (Wave 2)
-- [ ] 01-03-PLAN.md — config_loader, main.py orchestrator (per-company isolation, run_started_at, summary), end-to-end pipeline test, adapter-contract test, README docs (CFG-04/06, INFRA-08, SEC-03) (Wave 3)
+- [x] 01-03-PLAN.md — config_loader, main.py orchestrator (per-company isolation, run_started_at, summary), end-to-end pipeline test, adapter-contract test, README docs (CFG-04/06, INFRA-08, SEC-03) (Wave 3)
 
 ### Phase 2: ATS Breadth + JD-Scan
 **Goal**: User's `companies.txt` can list any Greenhouse, Lever, Ashby, SmartRecruiters, Workday, or Apple URL and the hourly run scrapes them all, extracting experience range from each posting's description so the Experience column populates.
@@ -88,7 +88,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Walking Skeleton | 0/3 | Planned | - |
+| 1. Walking Skeleton | 3/3 | Execute-complete (verification pending) | 2026-06-08 |
 | 2. ATS Breadth + JD-Scan | 0/? | Not started | - |
 | 3. Playwright Fallback + Credential Workflow | 0/? | Not started | - |
 | 4. Extraction Polish + Health Observability | 0/? | Not started | - |

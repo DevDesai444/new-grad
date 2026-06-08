@@ -16,18 +16,18 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **INFRA-05**: `health.json` is updated every run (including failed runs) so the workflow always produces ≥1 commit candidate per run — prevents GitHub's 60-day schedule auto-disable
 - [x] **INFRA-06**: Repo is public, owned by `github.com/DevDesai444`, named `new-grad`
 - [x] **INFRA-07**: `.gitignore` blocks `.env`, `*.har`, `trace.zip`, `cookies.json`, `__pycache__/`, `.pytest_cache/`, `seen.json.tmp`, `seen.json.bak`
-- [ ] **INFRA-08**: GitHub repo secret scanning + push protection enabled in repo settings (documented in README setup)
+- [x] **INFRA-08**: GitHub repo secret scanning + push protection enabled in repo settings (documented in README setup)
 - [x] **INFRA-09**: Any per-site credentials (rare) are stored only in GitHub Actions Secrets, read via `os.environ[...]`, never committed
 - [x] **INFRA-10**: Commits and pushes use `stefanzweifel/git-auto-commit-action@v5` with `GITHUB_TOKEN`; no PAT required
 
 ### Configuration (CFG)
 
-- [ ] **CFG-01**: `companies.txt` is the single source of truth — **the user only ever pastes one careers URL per line**; no other metadata, labels, hints, or fields are required from the user
-- [ ] **CFG-02**: Blank lines and `#`-prefixed comment lines are allowed in `companies.txt` and skipped by the loader
-- [ ] **CFG-03**: An optional inline `#adapter=<name>` hint on a URL line (added by Claude, never required of the user) overrides URL-pattern dispatch when needed
-- [ ] **CFG-04**: When the user instructs Claude CLI to "add company X" with a URL, Claude alone performs all necessary work: append the URL to `companies.txt`, add a new adapter if needed (per ADP-14), set up GitHub Actions Secrets if credentials are needed (per SEC-01), commit, and push. The user provides only the URL (and credentials if asked).
-- [ ] **CFG-05**: Malformed entries in `companies.txt` (invalid URL, unsupported scheme) are logged and skipped; the run continues
-- [ ] **CFG-06**: README documents the `companies.txt` format from the user's perspective: "paste career URLs, one per line"
+- [x] **CFG-01**: `companies.txt` is the single source of truth — **the user only ever pastes one careers URL per line**; no other metadata, labels, hints, or fields are required from the user
+- [x] **CFG-02**: Blank lines and `#`-prefixed comment lines are allowed in `companies.txt` and skipped by the loader
+- [x] **CFG-03**: An optional inline `#adapter=<name>` hint on a URL line (added by Claude, never required of the user) overrides URL-pattern dispatch when needed
+- [x] **CFG-04**: When the user instructs Claude CLI to "add company X" with a URL, Claude alone performs all necessary work: append the URL to `companies.txt`, add a new adapter if needed (per ADP-14), set up GitHub Actions Secrets if credentials are needed (per SEC-01), commit, and push. The user provides only the URL (and credentials if asked).
+- [x] **CFG-05**: Malformed entries in `companies.txt` (invalid URL, unsupported scheme) are logged and skipped; the run continues
+- [x] **CFG-06**: README documents the `companies.txt` format from the user's perspective: "paste career URLs, one per line"
 
 ### Scraping Adapters (ADP)
 
@@ -42,10 +42,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **ADP-09**: Playwright fallback adapter — uses Chromium with `wait_for_selector` or `expect_response` interception, 20s per-page navigation timeout, post-render parse via selectolax
 - [ ] **ADP-10**: `playwright-stealth` is applied conditionally only on sites that demonstrably need it (per-site flag in registry)
 - [x] **ADP-11**: Each adapter raises typed errors: `SiteBlocked` (rate limit / IP block), `SchemaDrift` (pydantic validation failed), `PlaywrightTimeout`, or generic `Exception` — distinct from "zero results found"
-- [ ] **ADP-12**: One company's adapter failure is caught by the orchestrator and does not abort the run for the other companies
+- [x] **ADP-12**: One company's adapter failure is caught by the orchestrator and does not abort the run for the other companies
 - [x] **ADP-13**: Per-adapter unit tests run against recorded JSON fixtures in `tests/fixtures/` via `respx` for HTTP mocking
-- [ ] **ADP-14**: When the user adds a career URL that no existing adapter recognizes, Claude creates a new adapter file `src/adapters/<name>.py` implementing the `Adapter` ABC and registers it. Existing adapter files MUST NOT be modified for this to land (Open/Closed). The new adapter is covered by at least one unit test using a recorded fixture before it ships.
-- [ ] **ADP-15**: Adapter additions are reversible — removing or disabling one adapter file (and its registry line) must not break any other adapter or the orchestrator
+- [x] **ADP-14**: When the user adds a career URL that no existing adapter recognizes, Claude creates a new adapter file `src/adapters/<name>.py` implementing the `Adapter` ABC and registers it. Existing adapter files MUST NOT be modified for this to land (Open/Closed). The new adapter is covered by at least one unit test using a recorded fixture before it ships.
+- [x] **ADP-15**: Adapter additions are reversible — removing or disabling one adapter file (and its registry line) must not break any other adapter or the orchestrator
 
 ### Filtering (FILT)
 
@@ -100,10 +100,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Run Lifecycle & Commit (RUN)
 
-- [ ] **RUN-01**: A single `run_started_at` UTC timestamp is captured at orchestrator start and threaded through all downstream components — no other component calls `datetime.now()`
-- [ ] **RUN-02**: Run summary is printed to the GitHub Actions step summary: counts of `+N new`, `M closed`, `K total open`, and per-source outcomes
+- [x] **RUN-01**: A single `run_started_at` UTC timestamp is captured at orchestrator start and threaded through all downstream components — no other component calls `datetime.now()`
+- [x] **RUN-02**: Run summary is printed to the GitHub Actions step summary: counts of `+N new`, `M closed`, `K total open`, and per-source outcomes
 - [x] **RUN-03**: The auto-commit step skips when no files changed (no-op runs do not push)
-- [ ] **RUN-04**: Commit message is informative: `chore(scan): +N new (Apple, Stripe), M closed (Anthropic)` when there are changes, else not committed at all
+- [x] **RUN-04**: Commit message is informative: `chore(scan): +N new (Apple, Stripe), M closed (Anthropic)` when there are changes, else not committed at all
 
 ### Out of Scope (carried from PROJECT.md)
 
@@ -159,15 +159,15 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | INFRA-05 | Phase 1 | Pending |
 | INFRA-06 | Phase 1 | Complete |
 | INFRA-07 | Phase 1 | Complete |
-| INFRA-08 | Phase 1 | Pending |
+| INFRA-08 | Phase 1 | Complete |
 | INFRA-09 | Phase 1 | Complete |
 | INFRA-10 | Phase 1 | Complete |
-| CFG-01 | Phase 1 | Pending |
-| CFG-02 | Phase 1 | Pending |
-| CFG-03 | Phase 1 | Pending |
-| CFG-04 | Phase 1 | Pending |
-| CFG-05 | Phase 1 | Pending |
-| CFG-06 | Phase 1 | Pending |
+| CFG-01 | Phase 1 | Complete |
+| CFG-02 | Phase 1 | Complete |
+| CFG-03 | Phase 1 | Complete |
+| CFG-04 | Phase 1 | Complete |
+| CFG-05 | Phase 1 | Complete |
+| CFG-06 | Phase 1 | Complete |
 | ADP-01 | Phase 1 | Complete |
 | ADP-02 | Phase 1 | Complete |
 | ADP-03 | Phase 1 | Complete |
@@ -179,10 +179,10 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | ADP-09 | Phase 3 | Pending |
 | ADP-10 | Phase 3 | Pending |
 | ADP-11 | Phase 1 | Complete |
-| ADP-12 | Phase 1 | Pending |
+| ADP-12 | Phase 1 | Complete |
 | ADP-13 | Phase 1 | Complete |
-| ADP-14 | Phase 1 | Pending |
-| ADP-15 | Phase 1 | Pending |
+| ADP-14 | Phase 1 | Complete |
+| ADP-15 | Phase 1 | Complete |
 | FILT-01 | Phase 1 | Complete |
 | FILT-02 | Phase 1 | Complete |
 | FILT-03 | Phase 2 | Pending |
@@ -219,10 +219,10 @@ Which phases cover which requirements. Filled in by the roadmapper.
 | SEC-04 | Phase 3 | Pending |
 | SEC-05 | Phase 1 | Complete |
 | SEC-06 | Phase 3 | Pending |
-| RUN-01 | Phase 1 | Pending |
-| RUN-02 | Phase 1 | Pending |
+| RUN-01 | Phase 1 | Complete |
+| RUN-02 | Phase 1 | Complete |
 | RUN-03 | Phase 1 | Complete |
-| RUN-04 | Phase 1 | Pending |
+| RUN-04 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 71 total (10 INFRA + 6 CFG + 15 ADP + 6 FILT + 7 NORM + 8 STATE + 9 OUT + 6 SEC + 4 RUN)
