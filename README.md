@@ -13,29 +13,35 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Micron | New College Grad - DRAM Design Engineer | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/New-College-Grad---DRAM-Design-Engineer_JR103089) | now |
 | Micron | New College Grad - Reticle Manufacturing Process Engineer | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Reticle-Manufacturing-Process-Engineer_JR103684) | now |
 | Micron | LPDDR Product Architect | San Jose, CA | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/San-Jose-CA/LPDDR-Product-Architect_JR103825) | now |
+| Micron | Hazardous Waste Coordinator | Boise, ID - ID1 | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---ID1/Hazardous-Waste-Coordinator_JR103873) | now |
 | Micron | Process Engineer | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Process-Engineer_JR103925) | now |
 | Micron | PCVD Process Engineer | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/PCVD-Process-Engineer_JR103933) | now |
 | Micron | US Expansion Planning Engineer | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/US-Expansion-Planning-Engineer_JR103935) | now |
+| Micron | MTS, Technical Solutions Sales Architect | 5 Locations | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/San-Jose-CA/MTS--Technical-Solutions-Sales-Architect_JR104071) | now |
 | Micron | New College Grad - Dry Etch Equipment Engineer | Boise, ID - ID1 | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---ID1/New-College-Grad---Dry-Etch-Equipment-Engineer_JR97628) | now |
 | Micron | OMT MQC ChemLab Engineer-TL | 2 Locations | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Taichung---Fab-16-Taiwan/OMT-MQC-ChemLab-Engineer-TL_JR98421) | now |
-| Micron | MTS, Technical Solutions Sales Architect | 5 Locations | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/San-Jose-CA/MTS--Technical-Solutions-Sales-Architect_JR104071) | now |
-| Micron | Hazardous Waste Coordinator | Boise, ID - ID1 | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---ID1/Hazardous-Waste-Coordinator_JR103873) | now |
+| Micron | Engineer, Product Architecture | 3 Locations | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Engineer--Product-Architecture_JR85854) | now |
+| Micron | Engineer-Wet Process Equipment Development | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Engineer-Wet-Process-Equipment-Development_JR102434) | now |
 | Arrow | Technical Solutions Architect RedHat | 2 Locations | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/BE-Sint-Stevens-Woluwe-Belgium-Woluwedal/Technical-Solutions-Architect-RedHat_R242971) | now |
 | Arrow | Customer Support Associate I | US-CO-Denver, Colorado (Panorama Arrow Building) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Denver-Colorado-Panorama-Arrow-Building/Customer-Support-Associate-I_R243654) | now |
 | Arrow | Engineering Technician | US-AZ-Phoenix, Arizona (East Sky Harbor Cir) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-AZ-Phoenix-Arizona-East-Sky-Harbor-Cir/Engineering-Technician_R244253) | now |
 | Arrow | Trade Compliance Specialist - International Logistics | 3 Locations | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Denver-Colorado-Panorama-Arrow-Building/Trade-Compliance-Specialist---International-Logistics_R244553) | now |
 | Arrow | Programming Machine Operator I | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Programming-Machine-Operator-I_R244630) | now |
-| Micron | Metrology Engineer, DRAM | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Metrology-Engineer--DRAM_JR94410) | 2h |
-| Servicenow | Distinguished Engineer | Santa Clara, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000131188964) | 5h |
-| Servicenow | Vice President, AI & Machine Learning Engineering | Santa Clara, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000131183509) | 5h |
-| Jpmorgan | J.P. Morgan Wealth Management – Private Client Advisor - Tukwila, WA | Tukwila, WA, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210659667) | 21h |
-| Jpmorgan | Executive Administrative Assistant | San Francisco, CA, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210667105) | 21h |
-| Jpmorgan | J.P. Morgan Wealth Management – Private Client Advisor - Seattle, WA (West Seattle) | Seattle, WA, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210680499) | 21h |
-| Jpmorgan | Commercial Banker - Emerging Middle Market Banking - Vice President | Portland, OR, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210696468) | 21h |
-| Jpmorgan | J.P. Morgan Wealth Management – Private Client Advisor - Staten Island, NY | Staten Island, NY, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210701467) | 21h |
-| Jpmorgan | Asset Management, Multi-Asset Solutions, Models Investment Specialist, Associate/Vice President | New York, NY, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210702177) | 21h |
-| Jpmorgan | Part Time Associate Banker San Joaquin - Brentwood, Antioch Area (30 hours) | Oakley, CA, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210707012) | 21h |
-| Jpmorgan | Home Lending Data & Analytics – Applied AI/ML Engineer - VP | Jacksonville, FL, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210691335) | 21h |
+| Arrow | Receiving Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Receiving-Associate_R245579) | now |
+| Arrow | Shipping Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Shipping-Associate_R245578) | now |
+| Arrow | Picking Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Picking-Associate_R245577) | now |
+| Arrow | Quality Inspector I | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Quality-Inspector-I_R243371) | now |
+| Micron | Metrology Engineer, DRAM | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Metrology-Engineer--DRAM_JR94410) | 5h |
+| Servicenow | Distinguished Engineer | Santa Clara, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000131188964) | 7h |
+| Servicenow | Vice President, AI & Machine Learning Engineering | Santa Clara, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000131183509) | 7h |
+| Jpmorgan | J.P. Morgan Wealth Management – Private Client Advisor - Tukwila, WA | Tukwila, WA, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210659667) | 23h |
+| Jpmorgan | Executive Administrative Assistant | San Francisco, CA, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210667105) | 23h |
+| Jpmorgan | J.P. Morgan Wealth Management – Private Client Advisor - Seattle, WA (West Seattle) | Seattle, WA, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210680499) | 23h |
+| Jpmorgan | Home Lending Data & Analytics – Applied AI/ML Engineer - VP | Jacksonville, FL, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210691335) | 23h |
+| Jpmorgan | Commercial Banker - Emerging Middle Market Banking - Vice President | Portland, OR, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210696468) | 23h |
+| Jpmorgan | J.P. Morgan Wealth Management – Private Client Advisor - Staten Island, NY | Staten Island, NY, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210701467) | 23h |
+| Jpmorgan | Asset Management, Multi-Asset Solutions, Models Investment Specialist, Associate/Vice President | New York, NY, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210702177) | 23h |
+| Jpmorgan | Part Time Associate Banker San Joaquin - Brentwood, Antioch Area (30 hours) | Oakley, CA, United States | — |  | [Apply](https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210707012) | 23h |
 | Micron | New College Grad - Software Engineer, Full Stack | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Software-Engineer---Full-Stack_JR102227) | 23h |
 | Micron | Assistant General Counsel -Technology Licensing | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Assistant-General-Counsel----Technology-Licensing_JR103219) | 23h |
 | Micron | ENGINEER, OMT HVM PROD OPS PLANNING TACTICAL CAPACITY | 2 Locations | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Miaoli---Tongluo-Taiwan/ENGINEER--OMT-HVM-PROD-OPS-PLANNING-TACTICAL-CAPACITY_JR103225) | 23h |
@@ -83,12 +89,11 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Arrow | Field Applications Engineer (Altera FPGA) | US-CA-San Jose, California (Metro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CA-San-Jose-California-Metro-Dr/Field-Applications-Engineer--Altera-FPGA-_R244114) | 3d |
 | Arrow | Warehouse Associate II | Phoenix, Arizona | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/Phoenix-Arizona/Warehouse-Associate-II_R244486) | 3d |
 | Arrow | Customer Support Associate | US-GA-Alpharetta, Georgia (Sanct) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-GA-Alpharetta-Georgia-Sanct/Customer-Support-Associate_R245479) | 3d |
-| Servicenow | Agentic Search Infrastructure Engineer - Moveworks | Mountain View, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130592199) | 3d |
+| Servicenow | Agentic Search Infrastructure Engineer - Moveworks | Mountain View, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130592199) | 4d |
 | Servicenow | Partner Technical Architect | Waltham, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130581690) | 4d |
 | Micron | Principle AI FinOps & Tokenomics (Consumption Intelligence, Cost Governance & Value Realization) | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Principle-AI-FinOps---Tokenomics--Consumption-Intelligence--Cost-Governance---Value-Realization-_JR103427) | 4d |
 | Servicenow | Commercial Account Executive, CRM Solutions | Staines, gb | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130557804) | 4d |
 | Servicenow | Machine Learning Engineer, Agentic Product - Moveworks | Mountain View, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130554339) | 4d |
-| Servicenow | Cybersecurity Incident Response Analyst | San Diego, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130307160) | 4d |
 | Micron | Manufacturing Alignment Engineer (Dry Etch) | Manassas, VA - Fab 6 | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Manassas-VA----Fab-6/Manufacturing-Alignment-Engineer--Dry-Etch-_JR102624) | 4d |
 | Micron | System Validation Technician | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/System-Validation-Technician_JR103221) | 4d |
 | Micron | High Bandwidth Memory Quality Engineer | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/EHigh-Bandwidth-Memory-Quality-Engineer_JR103255) | 4d |
@@ -102,6 +107,7 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Micron | Implant Process Engineer | Boise, ID - ID1 | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---ID1/Implant-Process-Engineer_JR99671-1) | 4d |
 | Arrow | Quality Inspector I (Tuesday to Friday - 2 shifts available) | US-AZ-Phoenix, Arizona (East Sky Harbor Cir) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-AZ-Phoenix-Arizona-East-Sky-Harbor-Cir/Quality-Inspector-1_R243311) | 4d |
 | Arrow | Field Sales Rep (Citrix) | 48 Locations | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Colorado-Remote-Employees/Field-Sales-Rep--Citrix-_R244364) | 4d |
+| Servicenow | Cybersecurity Incident Response Analyst | San Diego, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130307160) | 5d |
 | Servicenow | Software Engineer, Agentic Systems - Moveworks | Mountain View, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130257420) | 5d |
 | Micron | Technician, Surface Lab | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Technician--Surface-Lab_JR100381) | 5d |
 | Micron | Vice President, Automotive & Embedded Products and Systems | 2 Locations | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Folsom-CA/Vice-President--Automotive---Embedded-Products-and-Systems_JR100762) | 5d |
@@ -116,10 +122,9 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Micron | Quality Technician - SSD RMA Failure Analysis | Longmont, CO | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Longmont-CO/Quality-Technician---SSD-RMA-Failure-Analysis_JR99499) | 5d |
 | Arrow | Production Technician | US-AZ-Phoenix, Arizona (East Sky Harbor Cir) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-AZ-Phoenix-Arizona-East-Sky-Harbor-Cir/Production-Technician_R239946) | 5d |
 | Arrow | Digital Engineer (eInfochips Inc.) | US-MA-Bedford-Massachusetts (Werfen) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-MA-Bedford-Massachusetts-Werfen/Digital-Engineer--eInfochips-Inc-_R242424-1) | 5d |
-| Arrow | Asset Specialist II | US-CO-Denver, Colorado (Panorama Arrow Building) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Denver-Colorado-Panorama-Arrow-Building/Asset-Specialist-II_R243775) | 5d |
+| Arrow | Asset Specialist II | US-CO-Denver, Colorado (Panorama Arrow Building) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Denver-Colorado-Panorama-Arrow-Building/Asset-Specialist-II_R243775) | 6d |
 | Servicenow | Associate Solution Consultant - Portfolio Management | West Palm Beach, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000130024119) | 6d |
 | Servicenow | ServiceNow Futures Summit — GTM Experience | West Palm Beach, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000129870794) | 6d |
-| Servicenow | ServiceNow Futures Summit - SWE Experience | West Palm Beach, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000129860849) | 6d |
 | Micron | Analytical Chemist | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Analytical-Chemist_JR100405) | 6d |
 | Micron | Supply Management Analyst | Manassas, VA - Fab 6 | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Manassas-VA----Fab-6/Supply-Management-Analyst_JR101110) | 6d |
 | Micron | Supplier Quality Compliance Management Auditor | Boise, ID - ID1 | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---ID1/Supplier-Quality-Compliance-Management-Auditor_JR101493) | 6d |
@@ -140,6 +145,7 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Micron | Layout Engineer, DDEG | Boise, ID - Main Site | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Boise-ID---Main-Site/Layout-Engineer--DDEG_JR98350) | 6d |
 | Arrow | Inside Sales Representative II | 8 Locations | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Denver-Colorado-Panorama-Arrow-Building/Inside-Sales-Representative-II_R243125) | 6d |
 | Arrow | Field Applications Engineer | US-OR-Oregon (Remote Employees) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-OR-Oregon-Remote-Employees/Field-Applications-Engineer_R244505) | 6d |
+| Servicenow | ServiceNow Futures Summit - SWE Experience | West Palm Beach, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000129860849) | 1w |
 | Servicenow | AVP, Energy & Utilities Industry GTM | Santa Clara, us | — |  | [Apply](https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000129645315) | 1w |
 | Micron | Electrical Operations Engineer | Syracuse, NY - Downtown Office | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Syracuse-NY---Downtown-Office/Electrical-Operations-Engineer_JR100281) | 1w |
 | Micron | Waste Treatment Operations Engineer | Syracuse, NY - Downtown Office | — |  | [Apply](https://micron.wd1.myworkdayjobs.com/en-US/External/job/Syracuse-NY---Downtown-Office/Waste-Treatment-Operations-Engineer_JR100284) | 1w |
@@ -201,10 +207,10 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Arrow | Field Sales Representative II | US-CO-Denver, Colorado (Panorama Arrow Building) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Denver-Colorado-Panorama-Arrow-Building/Field-Sales-Representative-II_R243364) | 2w |
 | Arrow | Inside Sales Representative | 3 Locations | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/Huntsville-Alabama/Inside-Sales-Representative_R243039) | 3w |
 | Arrow | Inside Sales Representative | US-CA-San Jose, California (Metro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CA-San-Jose-California-Metro-Dr/Inside-Sales-Representative_R243143) | 3w |
-| Arrow | Picking Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Picking-Associate_R242225) | 3w |
 | Arrow | Pre-Sales Solutions Architect - IBM | 52 Locations | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CA-California-Remote-Employees/Technical-Solutions-Architect---IBM_R243217) | 3w |
 | Arrow | Logistics/Value Add Inventory Control Associate (Monday to Friday - 10:00 am to 6:30 pm) | US-AZ-Phoenix, Arizona (East Sky Harbor Cir) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-AZ-Phoenix-Arizona-East-Sky-Harbor-Cir/Logistics-Value-Add-Inventory-Control-Associate--Mon-to-Fri-10-00-to-6-30-pm-_R243782) | 3w |
 | Arrow | Legal Counsel (Legal Shared Services) | US-CO-Denver, Colorado (Panorama Arrow Building) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Denver-Colorado-Panorama-Arrow-Building/Staff-Attorney--Legal-Shared-Services-_R243811) | 3w |
+| Arrow | Picking Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Picking-Associate_R242225) | 3w |
 | Arrow | Field Applications Engineer - Salt Lake City | US-UT-Utah (Remote Employees) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-UT-Utah-Remote-Employees/Field-Applications-Engineer---Salt-Lake-City_R242701) | 3w |
 | Arrow | Device Engineer (eInfochips) | US-GA-Peachtree City-Georgia (Panasonic Auto) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-GA-Peachtree-City-Georgia-Panasonic-Auto/Device-Engineer--eInfochips-_R243947) | 3w |
 | Arrow | Warehouse Associate - Picking (12:30 PM - 9:00 PM) | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Warehouse-Associate---Picking--12-30-PM---9-00-PM-_R244125) | 3w |
@@ -245,8 +251,6 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Arrow | Field Sales Representative | 2 Locations | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-CO-Colorado-Remote-Employees/Field-Sales-Representative_R242053) | 4w |
 | Arrow | Oracle ERP Techno-Functional Analyst | US-AZ-Phoenix, Arizona (East Sky Harbor Cir) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-AZ-Phoenix-Arizona-East-Sky-Harbor-Cir/Oracle-ERP-Techno-Functional-Analyst_R242077) | 4w |
 | Arrow | Applications Engineer | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Applications-Engineer_R242199) | 4w |
-| Arrow | Shipping Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Shipping-Associate_R242226) | 4w |
-| Arrow | Receiving Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Receiving-Associate_R242228) | 4w |
 | Arrow | Global Marketing Strategist | US-GA-Georgia (Remote Employees) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-GA-Georgia-Remote-Employees/Global-Marketing-Strategist_R242234) | 4w |
 | Arrow | Sales Operations Specialist I | US-AZ-Phoenix, Arizona (East Sky Harbor Cir) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-AZ-Phoenix-Arizona-East-Sky-Harbor-Cir/Sales-Operations-Specialist-I_R242358-1) | 4w |
 | Arrow | Solution Field Application Engineer | 2 Locations | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/PL-Warsaw-Poland-Krakowiakw/Solution-Field-Application-Engineer_R242393) | 4w |
@@ -276,9 +280,12 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Arrow | Silicon Validation Technician | Nepean | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/Nepean/Silicon-Validation-Technician_R244014) | 4w |
 | Arrow | Embedded Engineer-UEFI (eInfochips) | Redmond, Washington | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/Redmond-Washington/Embedded-Engineer-UEFI--eInfochips-_R244275) | 4w |
 | Arrow | Material Handler/Forklift Driver | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Material-Handler-Forklift-Driver_R244292) | 4w |
-| Arrow |  |  | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC) | 17h |
-| Arrow |  |  | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC) | 13h |
-| Gm | Facilities Engineer |  | — |  | [Apply](https://search-careers.gm.com/en/jobs/jr-202611830/facilities-engineer) | 17h |
-| Gm | Tax Compliance Supervisor |  | — |  | [Apply](https://search-careers.gm.com/en/jobs/jr-202612645/tax-compliance-supervisor) | 13h |
+| Arrow | Shipping Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Shipping-Associate_R242226) | 4w |
+| Arrow | Receiving Associate | US-NV-Reno, Nevada (Maestro Dr) | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC/job/US-NV-Reno-Nevada-Maestro-Dr/Receiving-Associate_R242228) | 4w |
+| Arrow |  |  | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC) | 19h |
+| Arrow |  |  | — |  | [Apply](https://arrow.wd1.myworkdayjobs.com/en-US/AC) | 15h |
+| Gm | Facilities Engineer |  | — |  | [Apply](https://search-careers.gm.com/en/jobs/jr-202611830/facilities-engineer) | 19h |
+| Gm | Tax Compliance Supervisor |  | — |  | [Apply](https://search-careers.gm.com/en/jobs/jr-202612645/tax-compliance-supervisor) | 15h |
+| Gm | CAE Methods Technical Specialist – Structures & Fatigue |  | — |  | [Apply](https://search-careers.gm.com/en/jobs/jr-202612075/cae-methods-technical-specialist-structures-fatigue) | now |
 
 <!-- END JOBS -->
