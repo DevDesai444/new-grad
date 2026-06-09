@@ -394,6 +394,16 @@ def resolve_url(url: str, timeout_s: float = _DEFAULT_TIMEOUT_S) -> str:
         The final URL after following 301/302/303/307/308 redirects + any
         Bug-B extension match, or the original `url` on full failure.
     """
+    # Bug D (2026-06-08): if the input URL ALREADY matches a known non-catchall
+    # ATS hostname, return it unmodified — no HEAD chain, no body scan, no SR
+    # probe. Without this short-circuit, `jobs.apple.com` HTTP-redirects to
+    # `www.apple.com/careers/us/`, which AppleAdapter.matches() doesn't
+    # recognize, and dispatch falls through to PlaywrightAdapter → timeout.
+    # Mirrors the design intent: resolved_url should only differ from url
+    # when the resolver actually does useful disambiguation work.
+    if _resolved_matches_known_ats(url):
+        return url
+
     headers = {"User-Agent": _USER_AGENT}
     resolved = url  # default: return original on any failure
     chain_status: int | None = None
