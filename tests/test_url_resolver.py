@@ -24,6 +24,7 @@ Bug-B (2026-06-08) extensions:
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from src.url_resolver import resolve_url
@@ -683,3 +684,63 @@ def test_resolve_url_sr_probe_handles_api_5xx():
     respx.get(api_url).mock(return_value=httpx.Response(503))
 
     assert resolve_url(src_url) == src_url
+
+
+# ============================================================================
+# Bug D (2026-06-08) — known-ATS short-circuit
+# ============================================================================
+# When the input URL ALREADY matches a known non-catchall ATS hostname,
+# resolve_url() must return it unmodified — no HEAD chain, no body scan, no
+# SR probe. This prevents the resolver from "downgrading" jobs.apple.com to
+# www.apple.com/careers/us/ (which AppleAdapter.matches() doesn't recognize,
+# causing dispatch to fall through to PlaywrightAdapter and time out).
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://jobs.apple.com",
+        "https://jobs.apple.com/en-us/details/12345",
+        "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite",
+        "https://boards.greenhouse.io/stripe",
+        "https://jobs.lever.co/notion",
+        "https://jobs.ashbyhq.com/notion",
+        "https://careers.smartrecruiters.com/ServiceNow",
+    ],
+)
+def test_resolve_url_short_circuits_known_ats_hosts(url):
+    """Bug D — input URL on a known ATS host returns unmodified.
+
+    Critical: no HEAD/GET is issued (respx.mock would raise if it were —
+    we don't mock any endpoint here).
+    """
+    with respx.mock(assert_all_called=False):
+        assert resolve_url(url) == url
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://jobs.apple.com",
+        "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite",
+        "https://boards.greenhouse.io/stripe",
+        "https://jobs.lever.co/notion",
+        "https://jobs.ashbyhq.com/notion",
+        "https://careers.smartrecruiters.com/ServiceNow",
+    ],
+)
+def test_known_ats_routes_to_correct_adapter_after_resolver(url):
+    """Bug D end-to-end — after resolver runs, get_adapter returns the
+    expected non-catchall adapter (NOT PlaywrightAdapter)."""
+    from src.models import CompanyConfig
+    from src.registry import get_adapter
+    from src.adapters.playwright_fallback import PlaywrightAdapter
+
+    with respx.mock(assert_all_called=False):
+        c = CompanyConfig(name="test", url=url)
+        c.resolved_url = resolve_url(c.url)
+        adapter = get_adapter(c)
+        assert not isinstance(adapter, PlaywrightAdapter), (
+            f"{url} dispatched to PlaywrightAdapter — known-ATS dispatch "
+            f"regression. Adapter was {type(adapter).__name__}"
+        )
