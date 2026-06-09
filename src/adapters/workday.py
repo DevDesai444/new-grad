@@ -378,8 +378,15 @@ class WorkdayAdapter(Adapter):
                 continue
 
             ext_path = job.get("externalPath") or ""
+            # Bug G (2026-06-09): externalPath is JUST `/job/<location>/<title>_<id>`
+            # — Workday requires the full URL to include the locale and site
+            # segments (`/<locale>/<site>`) between host and externalPath, else
+            # 404s. Hardcoding `/en-US` is acceptable for all US-presence
+            # companies in the current companies.txt; future non-US-locale
+            # tenants would need WorkdayURLParts to carry the locale.
             full_url = (
                 f"https://{parts.tenant}.wd{parts.wd_num}.myworkdayjobs.com"
+                f"/en-US/{parts.site}"
                 f"{ext_path}"
             )
             dedup_key = f"wd:{parts.tenant}:{job_id}"

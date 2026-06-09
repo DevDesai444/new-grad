@@ -158,10 +158,11 @@ def test_fetch_happy_path_single_page(workday_fixture, nvidia_company):
         assert rp.source_company == "nvidia"
         assert rp.raw["__dedup_key"].startswith("wd:nvidia:")
         assert rp.raw["__tenant"] == "nvidia"
-        # Posting URL is the tenant-rooted absolute form of externalPath.
+        # Bug G regression — posting URL MUST include `/en-US/<site>` between
+        # host and externalPath. Without it, every Workday link 404s.
         assert rp.raw["__posting_url"].startswith(
-            "https://nvidia.wd5.myworkdayjobs.com/"
-        )
+            "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/"
+        ), f"Workday URL missing /en-US/<site> prefix: {rp.raw['__posting_url']}"
         # All postedOn forms in the fixture should resolve to a UTC datetime.
         assert isinstance(rp.raw["__posted_date_utc"], datetime)
         assert rp.raw["__posted_date_utc"].tzinfo is not None
