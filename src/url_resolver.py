@@ -99,12 +99,44 @@ _WORKDAY_URL_BODY_PATTERN = re.compile(
     r"/[A-Za-z0-9_-]+"
 )
 
+# Bug F: Oracle HCM Fusion Cloud tenant URL pattern. Matches
+# `https://<tenant>.fa.oraclecloud.com/...sites/<SITE>` — captures host +
+# `sites/<SITE>` segment for OracleHCMAdapter dispatch. JPMorgan's
+# careers.jpmorgan.com page embeds the Oracle tenant URL in its HTML
+# (`jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/.../sites/CX_1001`).
+_ORACLE_HCM_URL_BODY_PATTERN = re.compile(
+    r"https://(?:[a-z0-9-]+)\.fa\.oraclecloud\.com"
+    r"(?:/[A-Za-z0-9_/-]+)?/sites/[A-Za-z0-9_-]+",
+    re.IGNORECASE,
+)
+
 # Bug-B: SmartRecruiters probe host — when the SR identifier derives from
 # the original hostname, we HEAD-probe this URL pattern. SR consistently
 # 301-redirects `jobs.smartrecruiters.com/<Identifier>` to
 # `careers.smartrecruiters.com/<Identifier>` (both forms valid; matches()
 # matches the latter).
 _SR_PROBE_HOST = "jobs.smartrecruiters.com"
+
+
+def _scan_body_for_oracle_hcm(body: str) -> str | None:
+    """Return the first Oracle HCM Fusion tenant URL in `body`, or None.
+
+    Bug F helper. Mirrors `_scan_body_for_workday` for the Oracle HCM ATS
+    (used by JPMorgan and many Fortune-500 enterprises). The match captures
+    the host + `sites/<SITE>` segment, which is enough for OracleHCMAdapter
+    to parse tenant + siteNumber from.
+
+    Defensive: never raises.
+    """
+    if not body:
+        return None
+    try:
+        m = _ORACLE_HCM_URL_BODY_PATTERN.search(body)
+    except Exception:
+        return None
+    if m is None:
+        return None
+    return m.group(0).rstrip("./,;\"'")
 
 
 def _scan_body_for_workday(body: str) -> str | None:
@@ -277,6 +309,7 @@ _KNOWN_ATS_HOST_SUBSTRINGS = (
     "jobs.ashbyhq.com",
     "careers.smartrecruiters.com",
     "jobs.apple.com",
+    ".fa.oraclecloud.com",
 )
 
 
@@ -469,6 +502,16 @@ def resolve_url(url: str, timeout_s: float = _DEFAULT_TIMEOUT_S) -> str:
                     url, wd,
                 )
                 return wd
+            # Bug F: try Oracle HCM Fusion pattern in the same body. Used by
+            # JPMorgan + many large enterprises (careers.<co>.com landing
+            # embeds `<tenant>.fa.oraclecloud.com/.../sites/<SITE>`).
+            ohcm = _scan_body_for_oracle_hcm(body)
+            if ohcm is not None:
+                logger.info(
+                    "resolve_url: %s body-scan found Oracle HCM URL %s",
+                    url, ohcm,
+                )
+                return ohcm
 
     # Bug-B extension (B): SmartRecruiters probe — runs when the HEAD chain
     # didn't already produce a known-ATS URL. Covers the Cloudflare-403 case

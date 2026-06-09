@@ -619,6 +619,44 @@ def _normalize_playwright(rp: RawPosting, run_started_at: datetime) -> Posting:
     )
 
 
+def _normalize_oraclehcm(
+    rp: RawPosting, run_started_at: datetime
+) -> Posting:
+    """Normalize an Oracle HCM Fusion requisition raw posting (Bug F)."""
+    raw = rp.raw
+    dedup_key = raw["__dedup_key"]
+    title = (raw.get("Title") or "").strip()
+    location = normalize_location((raw.get("PrimaryLocation") or "").strip())
+    posting_url = canonicalize_url(raw.get("__posting_url") or "")
+    posted_raw = raw.get("PostedDate")  # ISO-8601 date like "2026-06-08"
+    posted_date = _parse_iso_to_utc(posted_raw)
+    exp_min, exp_max = extract_experience_range(
+        raw.get("ShortDescriptionStr") or ""
+        + " "
+        + (raw.get("ExternalQualificationsStr") or "")
+        + " "
+        + (raw.get("ExternalResponsibilitiesStr") or "")
+    )
+    company = rp.source_company
+    if company.islower():
+        company = company.capitalize()
+    return Posting(
+        dedup_key=dedup_key,
+        company=company,
+        title=title,
+        location=location,
+        salary="",
+        experience_min=exp_min,
+        experience_max=exp_max,
+        posting_url=posting_url,
+        posted_date=posted_date,
+        first_seen=run_started_at,
+        last_seen=run_started_at,
+        still_listed=True,
+        source_adapter=rp.source_adapter,
+    )
+
+
 _DISPATCH = {
     "greenhouse": _normalize_greenhouse,
     "lever": _normalize_lever,
@@ -626,6 +664,7 @@ _DISPATCH = {
     "smartrecruiters": _normalize_smartrecruiters,
     "workday": _normalize_workday,
     "apple": _normalize_apple,
+    "oraclehcm": _normalize_oraclehcm,
     "playwright": _normalize_playwright,  # Phase 3 Plan 03-02 — catch-all SPA
 }
 
