@@ -67,6 +67,40 @@ _TRACE_DIR = ".playwright-trace"  # gitignored per Plan 03-01
 # any of these in its URL. Heuristic; refine per-site if needed.
 _XHR_KEYWORDS = ("jobs", "openings", "positions", "careers", "roles")
 
+# Bug-E fix (2026-06-08): negative URL filters. The base predicate (any /api/
+# response containing one of _XHR_KEYWORDS) matched a LOT of non-postings
+# endpoints in production: auth/profile lookups, saved-jobs lists, locations
+# dropdowns, category facets, autocomplete suggestions. Those endpoints contain
+# one of _XHR_KEYWORDS as a substring (e.g. `/api/me/saved-jobs`,
+# `/api/jobs/suggestions`, `/api/jobs/locations`) but their JSON shape does NOT
+# match a postings list. Filter them out at the predicate level so
+# expect_response can keep waiting for the real postings endpoint.
+_XHR_URL_NEGATIVE_KEYWORDS = (
+    "/me",
+    "/profile",
+    "/suggestions",
+    "/locations",
+    "/saved",
+    "/preferences",
+    "/categories",
+    "/autocomplete",
+    "/facets",
+    "/filters",
+)
+
+# Bug-E fix (2026-06-08): recognized postings-list container keys. When the
+# XHR response is a top-level JSON object, we treat the presence of one of
+# these keys (with a list value) as proof that we caught the real postings
+# endpoint. Top-level list responses are always treated as recognized.
+_POSTINGS_CONTAINER_KEYS = (
+    "jobs",
+    "openings",
+    "positions",
+    "postings",
+    "results",
+    "data",
+)
+
 # Minimum per-operation timeout (ms) used when the remaining budget falls
 # below this floor. Bug-A fix (2026-06-08): the adapter is deadline-bounded
 # overall, but Playwright sync ops reject `timeout=0` or sub-millisecond
@@ -383,6 +417,19 @@ class PlaywrightAdapter(Adapter):
                     # context manager and the goto inside it share the same
                     # ~remaining budget — Playwright stops the whichever
                     # fires first, so this is safe.
+                    #
+                    # Bug-E fix (2026-06-08): the predicate now ALSO rejects
+                    # URLs containing any _XHR_URL_NEGATIVE_KEYWORDS substring
+                    # (auth/profile/saved/locations/suggestions/etc). Those
+                    # endpoints frequently contain a positive keyword as a
+                    # substring (e.g. `/api/me/saved-jobs`, `/api/jobs/
+                    # suggestions`) but their JSON shape is not a postings
+                    # list — matching them caused the adapter to declare
+                    # `outcome=ok postings=0` in production for AMD, Amazon,
+                    # GM, and Meta. The shape-validation below is the second
+                    # line of defense for unrecognized responses that slip
+                    # past this filter.
+                    xhr_shape_recognized = False
                     try:
                         with page.expect_response(
                             lambda r: (
@@ -391,6 +438,10 @@ class PlaywrightAdapter(Adapter):
                                 and any(
                                     kw in r.url.lower()
                                     for kw in _XHR_KEYWORDS
+                                )
+                                and not any(
+                                    neg in r.url.lower()
+                                    for neg in _XHR_URL_NEGATIVE_KEYWORDS
                                 )
                             ),
                             timeout=remaining_ms(),
@@ -402,7 +453,28 @@ class PlaywrightAdapter(Adapter):
                         except Exception:
                             data = None
                         if data is not None:
-                            postings_raw = self._parse_xhr_payload(data)
+                            postings_raw, xhr_shape_recognized = (
+                                self._parse_xhr_payload_with_shape(data)
+                            )
+                        # Bug-E fix (2026-06-08): only declare XHR success
+                        # when the payload had a postings-list-shaped
+                        # container. Two acceptance cases:
+                        #   1. Recognized shape with N>=0 items — including
+                        #      legitimately-empty postings lists (a site
+                        #      hiring nobody right now still gives us
+                        #      `{"jobs": []}`, which IS a real "0 postings"
+                        #      answer and MUST NOT trigger DOM-fallback).
+                        #   2. Unrecognized shape (caught wrong endpoint:
+                        #      `{"suggestions": [...]}`, `{"locations":
+                        #      [...]}`, auth payloads) — fall through to
+                        #      DOM-fallback by raising a synthetic timeout.
+                        # Pre-fix the adapter logged "ok 0 postings" in case
+                        # 2, silently lying about success.
+                        if not xhr_shape_recognized:
+                            raise PlaywrightTimeoutError(
+                                "XHR response shape not recognized as a "
+                                "postings list; falling through to DOM"
+                            )
                         extraction_path = "xhr"
                     except PlaywrightTimeoutError:
                         # D-01a path B: DOM fallback. By this point the XHR
@@ -501,22 +573,63 @@ class PlaywrightAdapter(Adapter):
         Also normalizes per-posting field names so the downstream
         normalizer's generic shape can read them consistently. We preserve
         the original keys too (the normalizer coalesces date keys).
+
+        Bug-E fix (2026-06-08): this method is now a thin wrapper around
+        `_parse_xhr_payload_with_shape` that discards the shape-recognized
+        flag, preserved for backward compatibility with external callers.
+        The adapter itself uses `_parse_xhr_payload_with_shape` so it can
+        distinguish "recognized shape with 0 items" (legit answer) from
+        "unrecognized shape" (caught wrong endpoint — fall through to DOM).
+        """
+        items, _shape_recognized = self._parse_xhr_payload_with_shape(data)
+        return items
+
+    def _parse_xhr_payload_with_shape(
+        self, data,
+    ) -> tuple[list[dict], bool]:
+        """Like `_parse_xhr_payload` but also returns a shape-recognized flag.
+
+        Bug-E fix (2026-06-08): the XHR predicate sometimes matches non-
+        postings endpoints whose URLs contain a positive keyword as a
+        substring (e.g. `/api/jobs/suggestions` returning
+        `{"suggestions": [...]}`). Pre-fix the adapter parsed those as 0
+        items and silently declared `outcome=ok postings=0`. Post-fix the
+        adapter checks the second return value:
+
+          - `(items, True)`  - recognized postings-list container (top-level
+                               list, or dict with `jobs`/`openings`/
+                               `positions`/`postings`/`results`/`data` as a
+                               list). Items may be empty (legit "0
+                               postings"). DO accept as success.
+          - `(items, False)` - unrecognized shape (dict without a known
+                               container key, or non-dict/non-list payload).
+                               DO fall through to DOM-fallback.
+
+        Defensive: never raises.
         """
         items: list[dict]
+        shape_recognized: bool
         if isinstance(data, list):
+            # Top-level list — treat as recognized postings list regardless
+            # of length. (Some sites legitimately return `[]` when no roles
+            # are open.)
             items = [item for item in data if isinstance(item, dict)]
+            shape_recognized = True
         elif isinstance(data, dict):
-            for key in (
-                "jobs", "openings", "positions", "postings", "results", "data",
-            ):
+            for key in _POSTINGS_CONTAINER_KEYS:
                 v = data.get(key)
                 if isinstance(v, list):
                     items = [item for item in v if isinstance(item, dict)]
+                    shape_recognized = True
                     break
             else:
+                # No recognized container key — likely caught the wrong
+                # endpoint (suggestions / locations / auth / etc).
                 items = []
+                shape_recognized = False
         else:
-            return []
+            # Neither list nor dict — definitely not a postings response.
+            return [], False
 
         # Mirror common XHR field aliases into the canonical names used by
         # _normalize_playwright. Preserve originals for the normalizer's
@@ -532,7 +645,7 @@ class PlaywrightAdapter(Adapter):
                     or ""
                 )
             normalized.append(out)
-        return normalized
+        return normalized, shape_recognized
 
     def _parse_html_selector(
         self, html: str, selector: str, base_url: str,
@@ -580,6 +693,9 @@ __all__ = [
     "_MIN_OP_TIMEOUT_MS",
     "_DEBUG_TRACE_ENV",
     "_USER_AGENT",
+    "_XHR_KEYWORDS",
+    "_XHR_URL_NEGATIVE_KEYWORDS",
+    "_POSTINGS_CONTAINER_KEYS",
     "_get_stealth_class",
     "_record_trace_started",
 ]

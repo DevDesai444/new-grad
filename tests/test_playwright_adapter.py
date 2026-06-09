@@ -435,6 +435,332 @@ def test_min_op_timeout_ms_constant_is_reasonable():
     )
 
 
+# --- Bug E (2026-06-08) — XHR predicate matching wrong endpoint -------------
+#
+# Production run 27169308682 logged `playwright:<co> extracted 0 postings via
+# xhr path` for AMD, Amazon, GM, and Meta. Root cause: the XHR predicate
+# (`/api/` + any of jobs/openings/positions/careers/roles) matched the FIRST
+# matching response — frequently auth/profile/suggestions/locations endpoints
+# — and `_parse_xhr_payload` returned [] because the JSON wasn't a postings
+# list. The adapter then declared `outcome=ok postings=0`, silently lying.
+#
+# Fix has two parts:
+#   (a) Validate payload shape before declaring success. Only treat
+#       `{<container_key>: [...]}` or top-level `[...]` as "this is a real
+#       postings response, accept whatever count (including 0)".
+#   (b) Tighten the predicate with negative URL filters
+#       (/me, /profile, /suggestions, /locations, /saved, /preferences,
+#       /categories, ...).
+#
+# Both lines of defense matter: (a) catches shapes that slipped past (b),
+# (b) catches obvious-by-URL wrong endpoints before we even parse them.
+
+
+def test_bug_e_xhr_unrecognized_shape_falls_through_to_dom():
+    """Bug-E: XHR matches a non-postings endpoint returning
+    `{"suggestions": ["engineer", "designer"]}` — shape is NOT a postings
+    list. Adapter MUST NOT declare success. It should fall through to the
+    DOM-fallback path (which here also fails because the served HTML has no
+    job-card selector, so adapter raises PlaywrightTimeout).
+
+    Pre-fix the adapter would log "ok 0 postings via xhr path" and return [].
+    Post-fix the adapter raises PlaywrightTimeout — an honest failure the
+    orchestrator can log.
+    """
+    # `/api/jobs/suggestions` matches the positive predicate ("/api/" +
+    # "jobs") but its body is NOT postings-list-shaped. NOTE: we deliberately
+    # use a URL that passes the negative filter (we exclude "/suggestions"
+    # in the predicate) — so we must use a URL the predicate ACCEPTS to
+    # exercise the shape-validation path. `/api/jobs/autocomplete` won't
+    # work either (autocomplete is in negatives). Use `/api/jobs/typeahead`
+    # which contains "jobs" and avoids all negative filters.
+    company = CompanyConfig(
+        name="bug-e-shape",
+        url="https://www.buge-shape.example/careers",
+        hint="playwright:timeout_s=3",
+    )
+
+    def handler(context):
+        context.route(
+            "**/api/jobs/typeahead",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {"suggestions": ["engineer", "designer"]}
+                ),
+            ),
+        )
+        context.route(
+            "https://www.buge-shape.example/careers",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="text/html",
+                body=(
+                    "<html><body><script>"
+                    "fetch('/api/jobs/typeahead').then(r=>r.json());"
+                    "</script><p>no postings rendered</p></body></html>"
+                ),
+            ),
+        )
+
+    # Adapter should NOT declare success on the bogus XHR. It falls through
+    # to DOM-fallback, which also fails (no job-card selector matches), so
+    # the final outcome is PlaywrightTimeout — not a silent "ok 0".
+    with pytest.raises(PlaywrightTimeout):
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+
+
+def test_bug_e_xhr_recognized_shape_with_3_items_succeeds(anthropic_company):
+    """Bug-E regression of the happy path: a real postings endpoint with 3
+    items still yields exactly 3 RawPostings via the XHR path. This is the
+    pre-existing behavior; the fix must not break it.
+    """
+    payload = {
+        "jobs": [
+            {
+                "id": "j-001",
+                "title": "Software Engineer",
+                "location": "Remote",
+                "postingUrl": "https://www.anthropic.com/careers/j-001",
+                "postingDate": "2026-06-01T00:00:00Z",
+            },
+            {
+                "id": "j-002",
+                "title": "Research Engineer",
+                "location": "SF",
+                "postingUrl": "https://www.anthropic.com/careers/j-002",
+                "postingDate": "2026-06-02T00:00:00Z",
+            },
+            {
+                "id": "j-003",
+                "title": "Product Manager",
+                "location": "NYC",
+                "postingUrl": "https://www.anthropic.com/careers/j-003",
+                "postingDate": "2026-06-03T00:00:00Z",
+            },
+        ],
+    }
+
+    def handler(context):
+        context.route(
+            "**/api/jobs",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(payload),
+            ),
+        )
+        context.route(
+            "https://www.anthropic.com/careers",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="text/html",
+                body=(
+                    "<html><body><script>"
+                    "fetch('/api/jobs').then(r=>r.json());"
+                    "</script></body></html>"
+                ),
+            ),
+        )
+
+    raw = PlaywrightAdapter().fetch(
+        anthropic_company, _test_route_handler=handler,
+    )
+    assert len(raw) == 3
+    for rp in raw:
+        assert rp.raw["__extraction_path"] == "xhr"
+
+
+def test_bug_e_xhr_recognized_shape_with_zero_items_succeeds(
+    anthropic_company,
+):
+    """Bug-E: a legitimately-empty postings list `{"jobs": []}` IS a real
+    "0 postings" answer (the company has no open roles right now). The
+    adapter MUST accept this as success and MUST NOT fall through to
+    DOM-fallback.
+
+    This is the key subtlety of the Bug-E fix: empty results are valid IF
+    the shape was recognized as a postings list. Falling through to DOM in
+    this case would waste the timeout budget and likely raise
+    PlaywrightTimeout for a site that's legitimately empty.
+    """
+    payload = {"jobs": []}  # recognized container, zero items, legit
+
+    def handler(context):
+        context.route(
+            "**/api/jobs",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(payload),
+            ),
+        )
+        context.route(
+            "https://www.anthropic.com/careers",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="text/html",
+                body=(
+                    "<html><body><script>"
+                    "fetch('/api/jobs').then(r=>r.json());"
+                    "</script></body></html>"
+                ),
+            ),
+        )
+
+    raw = PlaywrightAdapter().fetch(
+        anthropic_company, _test_route_handler=handler,
+    )
+    # Zero postings, but adapter declares success via the XHR path — no
+    # exception raised, no DOM-fallback attempted.
+    assert raw == []
+
+
+def test_bug_e_negative_url_filters_skip_auth_endpoints():
+    """Bug-E predicate filter: a `/api/me/saved-jobs` response (contains
+    `jobs` substring but is clearly an auth/profile endpoint) must NOT
+    match the predicate. Adapter should keep waiting for the real postings
+    endpoint, then either find it or time out.
+
+    We serve a page that fires ONLY `/api/me/saved-jobs` and no other XHR.
+    Adapter should timeout in the XHR-intercept block, fall through to
+    DOM-fallback (which also fails on the served stub HTML), and raise
+    PlaywrightTimeout.
+
+    Pre-fix the predicate matched `/api/me/saved-jobs` because it contains
+    "jobs" and "/api/" — and the adapter would silently declare success.
+    Post-fix the negative-keyword filter rejects it at the predicate level.
+    """
+    company = CompanyConfig(
+        name="bug-e-neg",
+        url="https://www.buge-neg.example/careers",
+        hint="playwright:timeout_s=3",
+    )
+
+    def handler(context):
+        context.route(
+            "**/api/me/saved-jobs",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    # Even if the shape LOOKS postings-like, the URL is
+                    # filtered out at the predicate level so we never reach
+                    # shape validation.
+                    {"jobs": [{"id": "fake-1", "title": "should be ignored"}]}
+                ),
+            ),
+        )
+        context.route(
+            "https://www.buge-neg.example/careers",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="text/html",
+                body=(
+                    "<html><body><script>"
+                    "fetch('/api/me/saved-jobs').then(r=>r.json());"
+                    "</script></body></html>"
+                ),
+            ),
+        )
+
+    # Adapter rejects the auth endpoint via negative-URL filter, keeps
+    # waiting, no real postings XHR fires within budget, DOM fallback also
+    # fails (no job-card selector), so PlaywrightTimeout.
+    with pytest.raises(PlaywrightTimeout):
+        PlaywrightAdapter().fetch(company, _test_route_handler=handler)
+
+
+def test_bug_e_parse_xhr_payload_with_shape_recognized_list():
+    """Unit test for the new shape-aware parser: top-level list is always
+    recognized (even if empty)."""
+    from src.adapters.playwright_fallback import PlaywrightAdapter
+    items, shape = PlaywrightAdapter()._parse_xhr_payload_with_shape([])
+    assert items == []
+    assert shape is True
+
+    items, shape = PlaywrightAdapter()._parse_xhr_payload_with_shape(
+        [{"id": "a", "title": "T"}],
+    )
+    assert len(items) == 1
+    assert shape is True
+
+
+def test_bug_e_parse_xhr_payload_with_shape_recognized_dict_container():
+    """Unit test: dict with `jobs`/`openings`/`positions`/`postings`/
+    `results`/`data` key (list value) is recognized."""
+    from src.adapters.playwright_fallback import (
+        PlaywrightAdapter,
+        _POSTINGS_CONTAINER_KEYS,
+    )
+    adapter = PlaywrightAdapter()
+    for key in _POSTINGS_CONTAINER_KEYS:
+        # Non-empty list under recognized key.
+        items, shape = adapter._parse_xhr_payload_with_shape(
+            {key: [{"id": "x"}]},
+        )
+        assert shape is True, (
+            f"key={key!r} not recognized as postings container"
+        )
+        assert len(items) == 1
+        # Empty list under recognized key — still recognized.
+        items, shape = adapter._parse_xhr_payload_with_shape({key: []})
+        assert shape is True, f"empty {key!r}=[] not recognized"
+        assert items == []
+
+
+def test_bug_e_parse_xhr_payload_with_shape_unrecognized_dict():
+    """Unit test: dict WITHOUT a known container key is NOT recognized.
+    These are the cases that caused the production silent-success bug.
+    """
+    from src.adapters.playwright_fallback import PlaywrightAdapter
+    adapter = PlaywrightAdapter()
+
+    # Real-world bogus shapes the predicate caught in production.
+    for bogus in (
+        {"suggestions": ["engineer", "designer"]},
+        {"locations": [{"city": "SF"}]},
+        {"user": {"id": "u-1", "email": "x@y.com"}},
+        {"categories": ["eng", "ops"]},
+        {"facets": {"loc": ["SF", "NYC"]}},
+        {"saved": []},
+        {"someUnknownKey": [{"id": "x"}]},
+    ):
+        items, shape = adapter._parse_xhr_payload_with_shape(bogus)
+        assert shape is False, (
+            f"{bogus!r} should be unrecognized but was recognized"
+        )
+        assert items == []
+
+
+def test_bug_e_parse_xhr_payload_with_shape_non_json_types():
+    """Unit test: non-list, non-dict payloads return `(items=[], shape=False)`.
+    Guards against `data is not None` but `data == "string"` or `data == 42`
+    edge cases."""
+    from src.adapters.playwright_fallback import PlaywrightAdapter
+    adapter = PlaywrightAdapter()
+    for non_container in ("a string", 42, True, 3.14):
+        items, shape = adapter._parse_xhr_payload_with_shape(non_container)
+        assert shape is False
+        assert items == []
+
+
+def test_bug_e_parse_xhr_payload_backwards_compat():
+    """The legacy `_parse_xhr_payload` (returns list only) must keep
+    working — external callers may depend on it. Bug-E added the
+    shape-aware variant but did not remove the old method.
+    """
+    from src.adapters.playwright_fallback import PlaywrightAdapter
+    adapter = PlaywrightAdapter()
+    assert adapter._parse_xhr_payload([]) == []
+    items = adapter._parse_xhr_payload({"jobs": [{"id": "a", "title": "T"}]})
+    assert len(items) == 1
+    assert items[0]["id"] == "a"
+    # Unrecognized shapes still return [] like before.
+    assert adapter._parse_xhr_payload({"suggestions": ["x"]}) == []
+
+
 # --- Stealth on by default + opt-out ----------------------------------------
 
 
