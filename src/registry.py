@@ -14,6 +14,7 @@ from src.adapters.ashby import AshbyAdapter
 from src.adapters.base import Adapter
 from src.adapters.greenhouse import GreenhouseAdapter
 from src.adapters.lever import LeverAdapter
+from src.adapters.oracle_hcm import OracleHCMAdapter
 from src.adapters.playwright_fallback import PlaywrightAdapter
 from src.adapters.smartrecruiters import SmartRecruitersAdapter
 from src.adapters.workday import WorkdayAdapter
@@ -43,6 +44,7 @@ ADAPTERS: list[type[Adapter]] = [
     SmartRecruitersAdapter,
     WorkdayAdapter,
     AppleAdapter,
+    OracleHCMAdapter,
     PlaywrightAdapter,  # CATCH-ALL — must stay last per CONTEXT.md D-01c
 ]
 
