@@ -50,8 +50,14 @@ def _fresh_empty_state() -> dict:
     }
 
 # STATE-06 — CONTEXT.md D-06: gate always engages; cold-start (prior=0) trivially
-# passes because new < 0.9 * 0 = 0 is False.
-_SANITY_FLOOR_RATIO = 0.9
+# passes because new < ratio * 0 = 0 is False.
+#
+# Bug-H (2026-06-09): lowered from 0.9 to 0.5 after Bug G's legitimate filter
+# tightening (`is_us_location` + Workday URL fix) shrank the table from 487 →
+# 253 (~48% drop). 0.9 was tuned in early Phase 1 when counts were ~5; for
+# production scale (~500) it false-alarms on every legitimate filter change.
+# 0.5 still catches catastrophic loss (everything errors out → 0 postings).
+_SANITY_FLOOR_RATIO = 0.5
 
 
 class SanityGateAborted(Exception):
@@ -211,15 +217,28 @@ def save_state_atomic(state: dict, path: Path = Path("seen.json")) -> None:
 def sanity_gate(prior_count: int, new_count: int, any_blocked: bool) -> None:
     """STATE-06 / CONTEXT.md D-06.
 
-    Raises SanityGateAborted if new_count < 0.9 * prior_count AND any_blocked is False.
+    Raises SanityGateAborted if new_count < _SANITY_FLOOR_RATIO * prior_count
+    AND any_blocked is False.
 
     Cold-start (prior_count == 0) trivially passes: 0 < 0 is False.
-    Prior=1 + new=0 case aborts — intentional defensive behavior per D-06.
     any_blocked=True skips the gate entirely (Pitfall 5 — known block, not silent loss).
+
+    Bug-H escape hatch: `SCRAPER_BYPASS_SANITY_GATE=1` env var skips the gate
+    for a one-time deliberate drop (e.g. filter tightening + replacing the
+    companies.txt list). The bypass is logged at WARNING level so it shows up
+    in Action run summaries.
     """
     if any_blocked:
         logger.info(
             "sanity_gate: any_blocked=True; gate skipped (prior=%d, new=%d)",
+            prior_count,
+            new_count,
+        )
+        return
+    if os.environ.get("SCRAPER_BYPASS_SANITY_GATE", "").strip() == "1":
+        logger.warning(
+            "sanity_gate: SCRAPER_BYPASS_SANITY_GATE=1 — gate manually skipped "
+            "(prior=%d, new=%d). Remove the env var after this run.",
             prior_count,
             new_count,
         )

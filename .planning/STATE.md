@@ -277,3 +277,9 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 ## Operator Next Steps
 
 - Start the next milestone with /gsd-new-milestone
+
+## Quick Tasks Completed
+
+| Date | Task ID | Description | Commit |
+|------|---------|-------------|--------|
+| 2026-06-08 | 260608-l3n | Trim README to postings table; move setup/ops/architecture to DOCS.md | bb719bd |

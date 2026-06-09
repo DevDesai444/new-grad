@@ -234,12 +234,15 @@ def test_sanity_gate_prior_one_zero_new_raises():
 @pytest.mark.parametrize(
     "prior,new,expect_raise",
     [
-        (100, 85, True),   # 85 < 90 → raise
-        (100, 89, True),   # 89 < 90 → raise
-        (100, 90, False),  # 90 == 90 → pass (strict <)
+        # Bug H (2026-06-09): threshold lowered from 0.9 to 0.5. These cases
+        # are calibrated to the new floor.
+        (100, 49, True),   # 49 < 50 → raise
+        (100, 50, False),  # 50 == 50 → pass (strict <)
+        (100, 75, False),  # 75 > 50 → pass (was True under 0.9)
+        (100, 90, False),  # 90 > 50 → pass
         (100, 91, False),
-        (10, 9, False),    # 9 == 9.0 → pass
-        (10, 8, True),     # 8 < 9.0 → raise
+        (10, 5, False),    # 5 == 5.0 → pass
+        (10, 4, True),     # 4 < 5.0 → raise
     ],
 )
 def test_sanity_gate_threshold(prior, new, expect_raise):
@@ -248,6 +251,24 @@ def test_sanity_gate_threshold(prior, new, expect_raise):
             sanity_gate(prior, new, False)
     else:
         sanity_gate(prior, new, False)
+
+
+def test_sanity_gate_bypass_env_var(monkeypatch):
+    """Bug H — SCRAPER_BYPASS_SANITY_GATE=1 skips the gate even on huge drops."""
+    monkeypatch.setenv("SCRAPER_BYPASS_SANITY_GATE", "1")
+    sanity_gate(1000, 10, False)  # 10 < 500 would normally raise; bypass overrides
+
+
+def test_sanity_gate_bypass_only_when_exactly_1(monkeypatch):
+    """Bug H — anything OTHER than the string '1' must NOT bypass.
+
+    Defensive: empty, whitespace, '0', 'true', 'yes' all fall through to the
+    real gate. Prevents accidental bypass via half-set env vars.
+    """
+    for bad_val in ("", " ", "0", "true", "yes", "Y", "TRUE"):
+        monkeypatch.setenv("SCRAPER_BYPASS_SANITY_GATE", bad_val)
+        with pytest.raises(SanityGateAborted):
+            sanity_gate(100, 10, False)
 
 
 def test_sanity_gate_any_blocked_excuses():
