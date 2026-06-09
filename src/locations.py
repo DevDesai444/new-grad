@@ -46,9 +46,13 @@ _US_CITIES = (
     "Durham", "Madison", "Ann Arbor", "Bellevue", "Brooklyn",
 )
 
-# Non-US tokens — case-insensitive substring match. ~45 entries covering the
-# major non-US tech hubs + country names. A match short-circuits rule 6 to False.
+# Non-US tokens — case-insensitive substring match. Covers major non-US tech
+# hubs + country names. Bug G (2026-06-09): expanded with Taiwan, Morocco,
+# Poland, Malaysia, Israel, China, Hungary, Egypt, and other observed-leaks
+# from production scrapes (Arrow / Micron / Workday tenants pull global
+# postings; the curated list must mention them or they default-pass rule 7).
 _NON_US_TOKENS = (
+    # Original tech hubs (Phase 4 seed)
     "London", "Berlin", "Munich", "Paris", "Amsterdam", "Dublin",
     "Bangalore", "Bengaluru", "Hyderabad", "Mumbai", "Pune", "Singapore",
     "Tokyo", "Seoul", "Shanghai", "Beijing", "Hong Kong", "Sydney",
@@ -58,6 +62,46 @@ _NON_US_TOKENS = (
     "United Kingdom", "Canada", "Germany", "India", "Japan",
     "Australia", "France", "Brazil", "Mexico", "Bahrain", "Ireland",
     "UK", "EU", "Europe",
+    # Bug G expansion — countries + cities observed leaking through.
+    "Taiwan", "Taichung", "Taipei", "Tongluo", "Tainan", "Taoyuan",
+    "Hsinchu", "Kaohsiung",
+    "Morocco", "Casablanca", "Rabat",
+    "Poland", "Gdansk", "Krakow", "Wroclaw",
+    "Malaysia", "Penang", "Kuala Lumpur", "Pulau Pinang", "Johor", "Selangor",
+    "Israel", "Petah Tikva", "Haifa", "Jerusalem",
+    "China", "Shenzhen", "Guangdong", "Suzhou", "Chengdu", "Wuhan",
+    "Hangzhou", "Tianjin", "Nanjing",
+    "Hungary", "Budapest", "Debrecen",
+    "Egypt", "Cairo", "Alexandria",
+    "Vietnam", "Hanoi", "Ho Chi Minh",
+    "Thailand", "Bangkok", "Chiang Mai",
+    "Philippines", "Manila", "Cebu", "Davao",
+    "Indonesia", "Jakarta", "Surabaya",
+    "Korea", "Busan", "Incheon",
+    "Pakistan", "Karachi", "Lahore", "Islamabad",
+    "Bangladesh", "Dhaka",
+    "Turkey", "Istanbul", "Ankara",
+    "Russia", "Moscow", "St. Petersburg", "St Petersburg",
+    "Ukraine", "Kyiv", "Lviv",
+    "South Africa", "Johannesburg", "Cape Town",
+    "Nigeria", "Lagos", "Abuja",
+    "Saudi Arabia", "Riyadh", "Jeddah",
+    "UAE", "Dubai", "Abu Dhabi",
+    "Argentina", "Colombia", "Bogota", "Chile", "Santiago", "Peru", "Lima",
+    "Czech Republic", "Czechia", "Prague",
+    "Romania", "Bucharest",
+    "Greece", "Athens",
+    "Portugal", "Lisbon", "Porto",
+    "Norway", "Oslo",
+    "Finland", "Helsinki",
+    "Austria", "Vienna",
+    "Belgium", "Brussels",
+    "Netherlands", "Rotterdam", "The Hague",
+    "Italy", "Rome", "Milan",
+    "Switzerland", "Geneva",
+    "New Zealand", "Auckland", "Wellington",
+    "Chennai", "Kolkata", "Delhi", "New Delhi", "Noida", "Gurgaon",
+    "Ahmedabad", "Cochin", "Kochi", "Jaipur",
 )
 
 # ----- Remote variant patterns (D-02) -----
@@ -92,10 +136,16 @@ _REMOTE_NON_US_PATTERNS = [
     ),
 ]
 
-# Standalone US state code — token-bounded match. Built dynamically from
-# _US_STATE_CODES so additions to the set propagate automatically.
+# Standalone US state code — Bug G (2026-06-09): require `, ST` (City-Comma-
+# State) pattern. The original `\bST\b` pattern matched country-code prefixes
+# like `MA-Casablanca, Morocco` (MA matches Massachusetts) and `IL-Petah Tikva,
+# Israel` (IL matches Illinois), letting global postings leak. We deliberately
+# do NOT match `^ST` at start-of-string, because Arrow's Workday tenant
+# returns locations of the form `<ISO-country-code>-<City>-<Country>` (e.g.
+# `MA-Casablanca`, `PL-Gdansk`, `IL-Petah-Tikva`) — most ISO-3166-1 codes
+# overlap US state postal codes. Built dynamically from _US_STATE_CODES.
 _US_STATE_REGEX = re.compile(
-    r"\b(" + "|".join(sorted(_US_STATE_CODES)) + r")\b"
+    r",\s+(" + "|".join(sorted(_US_STATE_CODES)) + r")\b"
 )
 
 
@@ -157,15 +207,21 @@ def is_us_location(raw: str | None) -> bool:
         if tok.lower() in lower:
             return True
 
-    # Rule 5 — known US city substring.
-    for city in _US_CITIES:
-        if city.lower() in lower:
-            return True
-
-    # Rule 6 — known non-US substring (any token from the curated list).
+    # Rule 5 — known non-US substring (any token from the curated list).
+    # Bug G (2026-06-09): non-US tokens now check BEFORE US cities, because
+    # ATS-side building names embed US city names ("Phoenix Aquila, India" =
+    # an Indian campus named after Phoenix). Without this reorder, the US
+    # city substring rule fires first and pulls non-US postings into the
+    # README. The countervailing risk (a US town named "London, OH") is
+    # acceptable — there is no major US tech-presence in such towns.
     for tok in _NON_US_TOKENS:
         if tok.lower() in lower:
             return False
+
+    # Rule 6 — known US city substring.
+    for city in _US_CITIES:
+        if city.lower() in lower:
+            return True
 
     # Rule 7 — fallback bias toward inclusion (FILT-05).
     return True

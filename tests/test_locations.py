@@ -212,3 +212,67 @@ class TestEdgeCases:
         canonical_non_us = normalize_location("Remote, UK")
         assert canonical_non_us == "Remote (non-US)"
         assert is_us_location(canonical_non_us) is False
+
+
+# === Bug G (2026-06-09) regression — country-code prefixes + missing countries ==
+#
+# Workday tenants (Arrow, Micron) return global postings with location strings
+# of the form `<ISO-3166>-<City>-<Country>` (e.g. `MA-Casablanca, Morocco`,
+# `IL-Petah-Tikva, Israel`, `PL-Gdansk, Poland`). Many ISO codes overlap US
+# state postal codes (MA, IL, PA, IN, etc.), so the original `\bST\b` state
+# regex matched them and they leaked through as "US".
+#
+# Plus: the original `_NON_US_TOKENS` list missed major countries (Taiwan,
+# Morocco, Poland, Malaysia, Israel, China-as-country, etc.).
+#
+# Plus: Indian campus building names embed US city names ("Phoenix Aquila"
+# in Hyderabad). Fixed by checking non-US tokens before US cities.
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "Taichung - Fab 16, Taiwan",
+        "MA-Casablanca, Morocco (Boulevard Al Quods)",
+        "PL-Gdansk, Poland (Aleja Grunwaldzka)",
+        "Penang, Pulau Pinang",
+        "IL-Petah Tikva, Israel (Shacham Street)",
+        "Shenzhen, Guangdong",
+        "Hyderabad - Phoenix Aquila, India",
+        "Bangkok, Thailand",
+        "Manila, Philippines",
+        "Budapest",
+        "Hsinchu",
+        "Kuala Lumpur",
+        "EG-Cairo-Egypt-Maadi-Technology-Park",
+        "Tongluo, Taiwan",
+    ],
+)
+def test_bug_g_country_code_prefixes_classify_as_non_us(raw):
+    """Country-code-prefix shape `<CC>-City, Country` must NOT match the US
+    state-code rule. Curated non-US tokens catch the country name."""
+    assert is_us_location(raw) is False, (
+        f"{raw!r} should classify as non-US"
+    )
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "Boise, ID - Main Site",
+        "Cambridge, MA",
+        "Reno, NV - Maestro Dr",
+        "Denver, CO, United States",
+        "Phoenix, Arizona",
+        "Austin, TX",
+        "Brooklyn, NY",
+        "San Francisco, CA",
+        "Seattle, WA",
+        "US-NV-Reno, Nevada (Maestro Dr)",
+    ],
+)
+def test_bug_g_real_us_locations_still_classify_us(raw):
+    """Regression — the tightened rules must NOT throw out real US postings."""
+    assert is_us_location(raw) is True, (
+        f"{raw!r} should still classify as US after Bug G tightening"
+    )
