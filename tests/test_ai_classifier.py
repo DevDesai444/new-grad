@@ -154,7 +154,7 @@ def test_missing_api_key(monkeypatch):
     with respx.mock as mock:
         result = classify("Software Engineer", None, api_key=None)
         # No HTTP call should have been made.
-        assert mock.call_count == 0
+        assert len(mock.calls) == 0
     assert result.keep is True
     assert result.reason == "no-api-key"
 
