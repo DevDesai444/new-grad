@@ -434,3 +434,14 @@ Automated hourly tracker for new-grad / early-career job postings (0–5 yrs exp
 | Gm | Tax Compliance Supervisor |  | — |  | [Apply](https://search-careers.gm.com/en/jobs/jr-202612645/tax-compliance-supervisor) | 2d |
 
 <!-- END JOBS -->
+
+## Groq Classification
+
+Each posting is classified by Groq (`llama-3.3-70b-versatile`) on two axes:
+
+- **Domain**: AI/ML, SWE, Data Science, or Other — only the first three are kept
+- **Early-career fit**: appropriate for 0–5 years of experience (biased toward inclusion on ambiguity)
+
+A posting is kept only when both conditions are met. If Groq is unreachable (timeout, HTTP error, malformed response) or `GROQ_API_KEY` is not set, the posting is kept by default — transient API problems never cause postings to be silently dropped.
+
+**Secret required**: `GROQ_API_KEY` in GitHub Actions Secrets (Groq free tier; no cost for this scan volume).

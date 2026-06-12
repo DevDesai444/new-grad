@@ -22,6 +22,23 @@ import respx
 from src.state_store import SCHEMA_VERSION
 
 _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "greenhouse_stripe.json"
+_GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+
+def _groq_clf(domain: str, is_early_career: bool) -> httpx.Response:
+    """Build a mock Groq classification response."""
+    body = {
+        "choices": [
+            {
+                "message": {
+                    "content": json.dumps(
+                        {"domain": domain, "is_early_career": is_early_career}
+                    )
+                }
+            }
+        ]
+    }
+    return httpx.Response(200, json=body)
 
 
 def _setup_repo(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -38,14 +55,36 @@ def _setup_repo(tmp_path: Path) -> tuple[Path, Path, Path]:
 
 
 @respx.mock
-def test_pipeline_first_run(tmp_path):
-    """Full pipeline: respx-mocked Greenhouse -> seen.json + README populated."""
+def test_pipeline_first_run(tmp_path, monkeypatch):
+    """Full pipeline: respx-mocked Greenhouse + Groq -> seen.json + README populated.
+
+    The fixture has 3 jobs:
+      - "Software Engineer, New Grad" -> SWE early-career -> kept
+      - "Senior Staff Engineer, Infrastructure" -> SWE NOT early-career -> dropped
+      - "Associate Software Engineer" -> SWE early-career -> kept
+
+    Groq is mocked to classify correctly. GROQ_API_KEY is injected via monkeypatch.
+    """
     from src.main import main
+
+    monkeypatch.setenv("GROQ_API_KEY", "test-e2e-key")
 
     fixture = json.loads(_FIXTURE_PATH.read_text())
     respx.get(
         "https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true"
     ).mock(return_value=httpx.Response(200, json=fixture))
+
+    # Mock Groq to classify the 3 postings in fixture order.
+    # New Grad -> SWE, early career -> keep
+    # Senior Staff -> SWE, NOT early career -> drop
+    # Associate -> SWE, early career -> keep
+    respx.post(_GROQ_URL).mock(
+        side_effect=[
+            _groq_clf("SWE", True),   # New Grad
+            _groq_clf("SWE", False),  # Senior Staff
+            _groq_clf("SWE", True),   # Associate
+        ]
+    )
 
     companies, state, readme = _setup_repo(tmp_path)
     code = main(companies, state, readme)
@@ -54,7 +93,7 @@ def test_pipeline_first_run(tmp_path):
     saved = orjson.loads(state.read_bytes())
     assert saved["schema_version"] == SCHEMA_VERSION
 
-    # The fixture has 3 jobs: New Grad (kept), Senior Staff (filtered out),
+    # The fixture has 3 jobs: New Grad (kept), Senior Staff (filtered out by Groq),
     # Associate (kept). Both kept postings should be in seen.json.
     kept_titles = [r["title"] for r in saved["postings"].values()]
     assert any("New Grad" in t for t in kept_titles), \
@@ -62,7 +101,7 @@ def test_pipeline_first_run(tmp_path):
     assert any("Associate" in t for t in kept_titles), \
         f"expected Associate in {kept_titles}"
     assert not any("Senior" in t for t in kept_titles), \
-        f"Senior should be filtered out, got {kept_titles}"
+        f"Senior should be filtered out by Groq, got {kept_titles}"
 
     # All kept postings should have still_listed=True and a source_adapter.
     for rec in saved["postings"].values():

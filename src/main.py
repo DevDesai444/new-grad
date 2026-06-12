@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src import ai_classifier
 from src.adapters.base import (
     InvalidCredential,
     MissingCredential,
@@ -31,7 +32,7 @@ from src.adapters.base import (
     SiteBlocked,
 )
 from src.config_loader import load_companies
-from src.filter import is_early_career, is_us_location_acceptable
+from src.filter import is_us_location_acceptable
 from src.models import CompanyConfig, Posting
 from src.normalizer import normalize
 from src.registry import NoAdapterFound, get_adapter
@@ -94,14 +95,16 @@ def _scrape_one(
         return [], f"error: {type(e).__name__}"
 
     # Step 3: normalize + filter each posting (one-bad-posting isolation).
-    # Filter order per Phase 4 CONTEXT.md D-03a:
-    #   is_early_career (FILT-01/02 title gate)
-    #     → is_us_location_acceptable (FILT-07 US-only region gate)
+    # Filter order (2026-06-11 locked_design):
+    #   is_us_location_acceptable (FILT-07 US-only region gate)
+    #     → Groq AI/SWE/DS + early-career classifier
     #       → state merge.
-    # Dropped non-US postings are NEVER stored in seen.json (STATE-04's
-    # "never delete" still applies to entries already stored before
-    # FILT-07 shipped — see CONTEXT.md D-03a).
+    # NOTE: is_early_career title-keyword gate REMOVED — Groq handles both
+    # domain and early-career classification per locked_design (2026-06-11).
+    # Dropped postings are NEVER stored in seen.json (STATE-04's "never delete"
+    # still applies to entries already stored before this change).
     postings: list[Posting] = []
+    groq_kept = groq_dropped = groq_errors = 0
     for rp in raw_postings:
         try:
             p = normalize(rp, run_started_at)
@@ -111,8 +114,6 @@ def _scrape_one(
                 company.name, type(e).__name__, e,
             )
             continue
-        if not is_early_career(p):
-            continue  # FILT-01/02 title-keyword gate.
         if not is_us_location_acceptable(p):
             # FILT-07 — log + drop. INFO not WARNING: a non-US posting is
             # not a bug; it's correctly filtered. The log line makes the
@@ -123,7 +124,22 @@ def _scrape_one(
                 company.name, p.title, p.location,
             )
             continue
+        clf = ai_classifier.classify(p.title, None)
+        if clf.reason.startswith("error:") or clf.reason == "no-api-key":
+            groq_errors += 1
+        if not clf.keep:
+            groq_dropped += 1
+            logger.info(
+                "scrape:%s drop Groq: %s (domain=%s, is_early_career=%s, reason=%s)",
+                company.name, p.title, clf.domain, clf.is_early_career, clf.reason,
+            )
+            continue
+        groq_kept += 1
         postings.append(p)
+    logger.info(
+        "scrape:%s groq-classified: kept=%d dropped=%d errors=%d",
+        company.name, groq_kept, groq_dropped, groq_errors,
+    )
     return postings, "ok"
 
 
