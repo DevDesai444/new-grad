@@ -29,7 +29,7 @@ progress:
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-08 — Milestone v1.0 completed and archived
+Last activity: 2026-06-11 — Completed quick task 260611-d2z: Add Groq AI/SWE/DS + early-career classifier
 
 ### Phase 1 Goal
 
@@ -283,3 +283,4 @@ User opens repo and sees real Greenhouse postings in a README table updated with
 | Date | Task ID | Description | Commit |
 |------|---------|-------------|--------|
 | 2026-06-08 | 260608-l3n | Trim README to postings table; move setup/ops/architecture to DOCS.md | bb719bd |
+| 2026-06-11 | 260611-d2z | Add Groq-backed AI/SWE/DS + early-career classifier; wire into scan pipeline | b80b1a9 |
